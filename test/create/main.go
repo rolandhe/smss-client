@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	//create()
+	create()
 	getMqList()
 	//delete()
 }
@@ -20,7 +20,9 @@ func create() {
 	}
 	defer pc.Close()
 
-	err = pc.CreateMQ("temp_mq", 0, "tid-2209991")
+	//mqName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
+	mqName := "temp_mq"
+	err = pc.CreateMQ(mqName, 0, "tid-2209991")
 
 	log.Println(err)
 }

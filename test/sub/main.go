@@ -33,7 +33,24 @@ func sub() {
 	defer sc.Close()
 	// 510125730
 
-	err = sc.Sub(0, 0, 5, time.Second*10, accept)
+	count := int64(0)
+	err = sc.Sub(249992, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+		for _, msg := range messages {
+			//if count%10 != 0 {
+			//	count++
+			//	continue
+			//}
+			var body string
+			if len(msg.GetPayload()) > 50 {
+				body = string(msg.GetPayload()[len(msg.GetPayload())-50:])
+			} else {
+				body = string(msg.GetPayload())
+			}
+			log.Printf("ts=%d, id=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
+			count++
+		}
+		return client.Ack
+	})
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -43,7 +60,13 @@ func sub() {
 
 func accept(messages []*client.SubMessage) client.AckEnum {
 	for _, msg := range messages {
-		log.Printf("%d, %d, %d, %d: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, string(msg.GetPayload()))
+		var body string
+		if len(msg.GetPayload()) > 50 {
+			body = string(msg.GetPayload()[len(msg.GetPayload())-50:])
+		} else {
+			body = string(msg.GetPayload())
+		}
+		log.Printf("%d, %d, %d, %d: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
 	}
 	return client.Ack
 }
