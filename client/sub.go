@@ -76,7 +76,6 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		}
 
 		if code == AliveCode {
-
 			log.Printf("sub is alive\n")
 			continue
 		}

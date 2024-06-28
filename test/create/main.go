@@ -8,7 +8,7 @@ import (
 
 func main() {
 	create()
-	getMqList()
+	//getMqList()
 	//delete()
 }
 

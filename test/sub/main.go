@@ -34,7 +34,7 @@ func sub() {
 	// 510125730
 
 	count := int64(0)
-	err = sc.Sub(249992, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+	err = sc.Sub(0, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			//if count%10 != 0 {
 			//	count++
