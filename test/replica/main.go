@@ -15,6 +15,6 @@ func main() {
 
 	defer rc.Close()
 
-	err = rc.Replica(0)
+	err = rc.Replica(97640)
 	log.Println(err)
 }
