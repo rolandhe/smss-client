@@ -14,7 +14,7 @@ func main() {
 }
 
 func sub() {
-	sc, err := client.NewSubClient("temp_mq", "test_usser", "localhost", 8080, time.Second*5)
+	sc, err := client.NewSubClient("order", "test_usser", "localhost", 12302, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -34,7 +34,7 @@ func sub() {
 	// 510125730
 
 	count := int64(0)
-	err = sc.Sub(2968748, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+	err = sc.Sub(0, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			//if count%10 != 0 {
 			//	count++

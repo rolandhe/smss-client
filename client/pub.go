@@ -143,32 +143,32 @@ func (pc *PubClient) DeleteMQ(mqName string, traceId string) error {
 	return pc.readResult(0)
 }
 
-func (pc *PubClient) ChangeMqLife(mqName string, life int64, traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
-	traceIdLen := len(traceId)
-	hBuf := make([]byte, HeaderSize)
-	hBuf[0] = CommandChangeLf.Byte()
-	hBuf[19] = byte(traceIdLen)
-	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(mqName)))
-	hBuf = append(hBuf, []byte(mqName)...)
-
-	if traceIdLen > 0 {
-		hBuf = append(hBuf, []byte(traceId)...)
-	}
-
-	pBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(pBuf, uint64(life))
-	hBuf = append(hBuf, pBuf...)
-
-	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
-		return err
-	}
-
-	return pc.readResult(0)
-}
+//func (pc *PubClient) ChangeMqLife(mqName string, life int64, traceId string) error {
+//	if err := pc.init(); err != nil {
+//		return err
+//	}
+//	traceIdLen := len(traceId)
+//	hBuf := make([]byte, HeaderSize)
+//	hBuf[0] = CommandChangeLf.Byte()
+//	hBuf[19] = byte(traceIdLen)
+//	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(mqName)))
+//	hBuf = append(hBuf, []byte(mqName)...)
+//
+//	if traceIdLen > 0 {
+//		hBuf = append(hBuf, []byte(traceId)...)
+//	}
+//
+//	pBuf := make([]byte, 8)
+//	binary.LittleEndian.PutUint64(pBuf, uint64(life))
+//	hBuf = append(hBuf, pBuf...)
+//
+//	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
+//		pc.Close()
+//		return err
+//	}
+//
+//	return pc.readResult(0)
+//}
 
 func (pc *PubClient) GetMqList(traceId string) (string, error) {
 	if err := pc.init(); err != nil {
@@ -246,7 +246,7 @@ func (pc *PubClient) readMqListResult() (string, error) {
 		code := binary.LittleEndian.Uint16(buf)
 		if code == OkCode {
 			bodyLen := int(binary.LittleEndian.Uint32(buf[2:]))
-			return readMQListBody(pc.conn, bodyLen,pc.ioTimeout)
+			return readMQListBody(pc.conn, bodyLen, pc.ioTimeout)
 		}
 		if code != ErrCode {
 			return "", errors.New("not suport code")
