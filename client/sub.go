@@ -20,8 +20,9 @@ const (
 
 type SubClient struct {
 	*network
-	mqName string
-	who    string
+	mqName           string
+	who              string
+	maxNoDataTimeout int64
 }
 
 type MessagesAccept func(messages []*SubMessage) AckEnum
@@ -32,13 +33,14 @@ func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*S
 		return nil, err
 	}
 	return &SubClient{
-		network: nw,
-		mqName:  mqName,
-		who:     who,
+		network:          nw,
+		mqName:           mqName,
+		who:              who,
+		maxNoDataTimeout: 35 * 1000,
 	}, nil
 }
 
-func (sc *SubClient) Sub(messageId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
+func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
 	var err error
 	defer func() {
 		if err != nil && !IsBizErr(err) {
@@ -48,7 +50,7 @@ func (sc *SubClient) Sub(messageId int64, batchSize uint8, ackTimeout time.Durat
 	if err = sc.init(); err != nil {
 		return err
 	}
-	buf := sc.packageSubCmd(messageId, batchSize, ackTimeout)
+	buf := sc.packageSubCmd(eventId, batchSize, ackTimeout)
 	if err = writeAll(sc.conn, buf, sc.ioTimeout); err != nil {
 		return err
 	}
@@ -61,10 +63,15 @@ func (sc *SubClient) Sub(messageId int64, batchSize uint8, ackTimeout time.Durat
 func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 	var respHeader SubRespHeader
 	var err error
+	lastTime := time.Now().UnixMilli()
 	for {
 		if err = readAll(sc.conn, respHeader.buf[:], sc.ioTimeout); err != nil {
 			if isTimeoutError(err) {
-				log.Printf("wait message timeout\n")
+				if time.Now().UnixMilli()-lastTime > sc.maxNoDataTimeout {
+					log.Printf("wait message timeout too long,maybe server dead\n")
+					return err
+				}
+				log.Printf("wait message timeout,continue...\n")
 				continue
 			}
 			return err
@@ -75,14 +82,17 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 			return readErrCodeMsg(sc.conn, msgLen, sc.ioTimeout)
 		}
 
-		if code == AliveCode {
-			log.Printf("sub is alive\n")
-			continue
-		}
 		if code == SubEndCode {
 			log.Printf("peer notify to end,maybe mq deleted,end sub\n")
 			return nil
 		}
+
+		lastTime = time.Now().UnixMilli()
+		if code == AliveCode {
+			log.Printf("sub is alive\n")
+			continue
+		}
+
 		if code != OkCode {
 			log.Printf("not support response code\n")
 			return nil

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/rolandhe/smss/client/client"
+	"github.com/rolandhe/smss/smss-client/client"
 	"log"
 	"strconv"
 	"sync"
@@ -20,9 +20,9 @@ func main() {
 	//_, ok := p.(*Two)
 	//log.Println(ok)
 	//pub()
-	delay()
+	//delay()
 	//changeLf()
-	//multi(32)
+	multi(256)
 }
 
 type One struct {
@@ -47,21 +47,21 @@ func multi(count int) {
 
 func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 	go func() {
-		pc, err := client.NewPubClient("localhost", 8080, time.Second*5000)
+		pc, err := client.NewPubClient("localhost", 12301, time.Second*5000)
 		if err != nil {
 			log.Printf("%v\n", err)
 			return
 		}
 		defer pc.Close()
 		<-notify
-		base := "thread=%d,index=%d,ggo,Voice of America is the state-owned news network and international radio broadcaster of the United States of America.AlibabaCloud (darwin; arm64) Node.js/v16.14.2 Core/1.0.1 TeaDSL/1 cloud-assist/1.2.5--"
-
-		for i := 1; i <= 1000; i++ {
+		//base := "thread=%d,index=%d,ggo,Voice of America is the state-owned news network and international radio broadcaster of the United States of America.AlibabaCloud (darwin; arm64) Node.js/v16.14.2 Core/1.0.1 TeaDSL/1 cloud-assist/1.2.5--j8"
+		base := "thread=%d,index=%d,little,Voice of America is the state-owned-j20"
+		for i := 1; i <= 100000; i++ {
 			body := fmt.Sprintf(base, no, i)
 			msg := client.NewMessage([]byte(body))
 			tid := fmt.Sprintf("tid-%d-%d", no, i)
 			msg.AddHeader("traceId", tid)
-			err = pc.Publish("temp_mq", msg, tid)
+			err = pc.Publish("order", msg, tid)
 			if err != nil {
 				log.Printf("%v\n", err)
 				break

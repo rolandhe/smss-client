@@ -1,7 +1,9 @@
 package main
 
 import (
-	"github.com/rolandhe/smss/client/client"
+	"flag"
+	"fmt"
+	"github.com/rolandhe/smss/smss-client/client"
 	"log"
 	"os"
 	"os/signal"
@@ -9,12 +11,19 @@ import (
 	"time"
 )
 
+var (
+	who     = flag.String("who", "", "subscriber who")
+	eventId = flag.Int64("event", 0, "event id")
+)
+
 func main() {
-	sub()
+	flag.Parse()
+	fmt.Println(*who, *eventId)
+	sub(*who, *eventId)
 }
 
-func sub() {
-	sc, err := client.NewSubClient("order", "test_usser", "localhost", 12302, time.Second*5)
+func sub(who string, eventId int64) {
+	sc, err := client.NewSubClient("order", who, "localhost", 12301, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -34,7 +43,8 @@ func sub() {
 	// 510125730
 
 	count := int64(0)
-	err = sc.Sub(0, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+	// 311041
+	err = sc.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			//if count%10 != 0 {
 			//	count++
@@ -46,8 +56,13 @@ func sub() {
 			} else {
 				body = string(msg.GetPayload())
 			}
-			log.Printf("ts=%d, id=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
+			if count > 25599900 || count%100000 == 0 {
+				log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
+			}
 			count++
+			if count == 25600000 {
+				count = 0
+			}
 		}
 		return client.Ack
 	})

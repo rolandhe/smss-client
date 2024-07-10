@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/rolandhe/smss/client/client"
+	"github.com/rolandhe/smss/smss-client/client"
 	"log"
 	"time"
 )
@@ -43,7 +43,7 @@ func delete() {
 }
 
 func getMqList() {
-	pc, err := client.NewPubClient("localhost", 12302, time.Second*5)
+	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
