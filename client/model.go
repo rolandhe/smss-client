@@ -77,10 +77,10 @@ func (m *Message) GetPayload() []byte {
 
 type SubMessage struct {
 	*Message
-	Ts     int64
-	Id     int64
-	FileId int64
-	Pos    int64
+	Ts      int64
+	EventId int64
+	FileId  int64
+	Pos     int64
 }
 
 func (sm *SubMessage) FromBytes(buf []byte) (int, error) {
@@ -89,7 +89,7 @@ func (sm *SubMessage) FromBytes(buf []byte) (int, error) {
 	}
 	sm.Message = NewEmptyMessage()
 	sm.Ts = int64(binary.LittleEndian.Uint64(buf))
-	sm.Id = int64(binary.LittleEndian.Uint64(buf[8:]))
+	sm.EventId = int64(binary.LittleEndian.Uint64(buf[8:]))
 	sm.FileId = int64(binary.LittleEndian.Uint64(buf[16:]))
 	sm.Pos = int64(binary.LittleEndian.Uint64(buf[24:]))
 	payloadSize := int(binary.LittleEndian.Uint32(buf[32:]))

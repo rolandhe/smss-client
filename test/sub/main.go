@@ -57,7 +57,7 @@ func sub(who string, eventId int64) {
 				body = string(msg.GetPayload())
 			}
 			if count > 25599900 || count%100000 == 0 {
-				log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
+				log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
 			}
 			count++
 			if count == 25600000 {
@@ -81,7 +81,7 @@ func accept(messages []*client.SubMessage) client.AckEnum {
 		} else {
 			body = string(msg.GetPayload())
 		}
-		log.Printf("%d, %d, %d, %d: %s\n", msg.Ts, msg.Id, msg.FileId, msg.Pos, body)
+		log.Printf("%d, %d, %d, %d: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
 	}
 	return client.Ack
 }
