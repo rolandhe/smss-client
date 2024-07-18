@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	//create()
-	getMqList()
+	create()
+	//getMqList()
 	//delete()
 }
 
@@ -52,6 +52,20 @@ func getMqList() {
 
 	var j string
 	j, err = pc.GetMqList("tid-99yymm009")
+
+	log.Println(j, err)
+}
+
+func getValidMqList() {
+	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer pc.Close()
+
+	var j string
+	j, err = pc.g("tid-99yymm009")
 
 	log.Println(j, err)
 }

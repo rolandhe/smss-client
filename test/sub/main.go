@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"github.com/rolandhe/smss/smss-client/client"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -29,27 +26,13 @@ func sub(who string, eventId int64) {
 		return
 	}
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	//go func() {
-	//	<-sigs
-	//	fmt.Println("Received interrupt signal, shutting down...")
-	//	sc.Close()
-	//	os.Exit(0)
-	//}()
-
 	defer sc.Close()
-	// 510125730
 
 	count := int64(0)
 	// 311041
 	err = sc.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
-			//if count%10 != 0 {
-			//	count++
-			//	continue
-			//}
+
 			var body string
 			if len(msg.GetPayload()) > 50 {
 				body = string(msg.GetPayload()[len(msg.GetPayload())-50:])

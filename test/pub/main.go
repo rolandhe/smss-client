@@ -22,7 +22,7 @@ func main() {
 	//pub()
 	//delay()
 	//changeLf()
-	multi(256)
+	multi(32)
 }
 
 type One struct {
@@ -34,6 +34,7 @@ type Two struct {
 }
 
 func multi(count int) {
+	start := time.Now().UnixMilli()
 	var wg sync.WaitGroup
 	wg.Add(count)
 	notify := make(chan struct{})
@@ -42,12 +43,14 @@ func multi(count int) {
 	}
 	close(notify)
 	wg.Wait()
-	log.Println("finish all threads")
+	end := time.Now().UnixMilli()
+
+	log.Printf("finish all threads,cost:%d ms", end-start)
 }
 
 func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 	go func() {
-		pc, err := client.NewPubClient("localhost", 12301, time.Second*5000)
+		pc, err := client.NewPubClient("localhost", 12301, time.Second*50000)
 		if err != nil {
 			log.Printf("%v\n", err)
 			return
@@ -55,8 +58,8 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 		defer pc.Close()
 		<-notify
 		//base := "thread=%d,index=%d,ggo,Voice of America is the state-owned news network and international radio broadcaster of the United States of America.AlibabaCloud (darwin; arm64) Node.js/v16.14.2 Core/1.0.1 TeaDSL/1 cloud-assist/1.2.5--j8"
-		base := "thread=%d,index=%d,little,Voice of America is the state-owned-j20"
-		for i := 1; i <= 100000; i++ {
+		base := "thread=%d,index=%d,CREATE INDEX idx_name_prefix ON table_name(name(10));little,Voice of America is the state-owned-j20"
+		for i := 1; i <= 10000; i++ {
 			body := fmt.Sprintf(base, no, i)
 			msg := client.NewMessage([]byte(body))
 			tid := fmt.Sprintf("tid-%d-%d", no, i)
@@ -66,7 +69,7 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 				log.Printf("%v\n", err)
 				break
 			}
-			if i%50 == 0 {
+			if i%1000 == 0 {
 				log.Printf("finish no=%d,index=%d\n", no, i)
 			}
 		}
