@@ -8,7 +8,7 @@ import (
 
 func main() {
 	create()
-	//getMqList()
+	//getTopicList()
 	//delete()
 }
 
@@ -20,11 +20,11 @@ func create() {
 	}
 	defer pc.Close()
 
-	//mqName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
-	mqName := "order"
+	//topicName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
+	topicName := "order"
 
 	//expireAt := time.Now().Add(time.Minute * 2).UnixMilli()
-	err = pc.CreateMQ(mqName, 0, "tid-2209991")
+	err = pc.CreateTopic(topicName, 0, "tid-2209991")
 
 	log.Println(err)
 }
@@ -37,12 +37,12 @@ func delete() {
 	}
 	defer pc.Close()
 
-	err = pc.DeleteMQ("temp_mq", "tid-9999del33")
+	err = pc.DeleteTopic("temp_topic", "tid-9999del33")
 
 	log.Println(err)
 }
 
-func getMqList() {
+func getTopicList() {
 	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -51,12 +51,12 @@ func getMqList() {
 	defer pc.Close()
 
 	var j string
-	j, err = pc.GetMqList("tid-99yymm009")
+	j, err = pc.GetTopicList("tid-99yymm009")
 
 	log.Println(j, err)
 }
 
-func getValidMqList() {
+func getValidTopicList() {
 	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -65,7 +65,7 @@ func getValidMqList() {
 	defer pc.Close()
 
 	var j string
-	j, err = pc.g("tid-99yymm009")
+	j, err = pc.GetTopicList("tid-99yymm009")
 
 	log.Println(j, err)
 }

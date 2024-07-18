@@ -20,7 +20,7 @@ func NewPubClient(host string, port int, timeout time.Duration) (*PubClient, err
 	}, nil
 }
 
-func (pc *PubClient) Publish(mqName string, msg *Message, traceId string) error {
+func (pc *PubClient) Publish(topicName string, msg *Message, traceId string) error {
 	if err := pc.init(); err != nil {
 		return err
 	}
@@ -30,14 +30,14 @@ func (pc *PubClient) Publish(mqName string, msg *Message, traceId string) error 
 		return errors.New("empty message")
 	}
 	traceIdLen := len(traceId)
-	buf := make([]byte, HeaderSize+len(mqName)+payLoadLen+traceIdLen)
+	buf := make([]byte, HeaderSize+len(topicName)+payLoadLen+traceIdLen)
 	buf[0] = CommandPub.Byte()
 	buf[19] = byte(traceIdLen)
-	binary.LittleEndian.PutUint16(buf[1:], uint16(len(mqName)))
+	binary.LittleEndian.PutUint16(buf[1:], uint16(len(topicName)))
 	binary.LittleEndian.PutUint32(buf[3:], uint32(payLoadLen))
 
 	dst := buf[HeaderSize:]
-	n := copy(dst, mqName)
+	n := copy(dst, topicName)
 	dst = dst[n:]
 	if traceIdLen > 0 {
 		n = copy(dst, traceId)
@@ -56,7 +56,7 @@ func (pc *PubClient) Publish(mqName string, msg *Message, traceId string) error 
 	return pc.readResult(0)
 }
 
-func (pc *PubClient) PublishDelay(mqName string, msg *Message, delayMils int64, traceId string) error {
+func (pc *PubClient) PublishDelay(topicName string, msg *Message, delayMils int64, traceId string) error {
 	if err := pc.init(); err != nil {
 		return err
 	}
@@ -66,14 +66,14 @@ func (pc *PubClient) PublishDelay(mqName string, msg *Message, delayMils int64, 
 		return errors.New("empty message")
 	}
 	traceIdLen := len(traceId)
-	buf := make([]byte, HeaderSize+len(mqName)+len(payload)+12+traceIdLen)
+	buf := make([]byte, HeaderSize+len(topicName)+len(payload)+12+traceIdLen)
 	buf[0] = CommandDelay.Byte()
 	buf[19] = byte(traceIdLen)
-	binary.LittleEndian.PutUint16(buf[1:], uint16(len(mqName)))
+	binary.LittleEndian.PutUint16(buf[1:], uint16(len(topicName)))
 	binary.LittleEndian.PutUint32(buf[3:], uint32(payLoadLen))
 
 	dst := buf[HeaderSize:]
-	n := copy(dst, mqName)
+	n := copy(dst, topicName)
 	dst = dst[n:]
 	if traceIdLen > 0 {
 		n = copy(dst, traceId)
@@ -95,16 +95,16 @@ func (pc *PubClient) PublishDelay(mqName string, msg *Message, delayMils int64, 
 	return pc.readResult(0)
 }
 
-func (pc *PubClient) CreateMQ(mqName string, life int64, traceId string) error {
+func (pc *PubClient) CreateTopic(topicName string, life int64, traceId string) error {
 	if err := pc.init(); err != nil {
 		return err
 	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
-	hBuf[0] = CommandCreateMQ.Byte()
+	hBuf[0] = CommandCreateTopic.Byte()
 	hBuf[19] = byte(traceIdLen)
-	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(mqName)))
-	hBuf = append(hBuf, []byte(mqName)...)
+	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(topicName)))
+	hBuf = append(hBuf, []byte(topicName)...)
 
 	if traceIdLen > 0 {
 		hBuf = append(hBuf, []byte(traceId)...)
@@ -122,16 +122,16 @@ func (pc *PubClient) CreateMQ(mqName string, life int64, traceId string) error {
 	return pc.readResult(0)
 }
 
-func (pc *PubClient) DeleteMQ(mqName string, traceId string) error {
+func (pc *PubClient) DeleteTopic(topicName string, traceId string) error {
 	if err := pc.init(); err != nil {
 		return err
 	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
-	hBuf[0] = CommandDeleteMQ.Byte()
+	hBuf[0] = CommandDeleteTopic.Byte()
 	hBuf[19] = byte(traceIdLen)
-	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(mqName)))
-	hBuf = append(hBuf, []byte(mqName)...)
+	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(topicName)))
+	hBuf = append(hBuf, []byte(topicName)...)
 	if traceIdLen > 0 {
 		hBuf = append(hBuf, []byte(traceId)...)
 	}
@@ -143,34 +143,7 @@ func (pc *PubClient) DeleteMQ(mqName string, traceId string) error {
 	return pc.readResult(0)
 }
 
-//func (pc *PubClient) ChangeMqLife(mqName string, life int64, traceId string) error {
-//	if err := pc.init(); err != nil {
-//		return err
-//	}
-//	traceIdLen := len(traceId)
-//	hBuf := make([]byte, HeaderSize)
-//	hBuf[0] = CommandChangeLf.Byte()
-//	hBuf[19] = byte(traceIdLen)
-//	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(mqName)))
-//	hBuf = append(hBuf, []byte(mqName)...)
-//
-//	if traceIdLen > 0 {
-//		hBuf = append(hBuf, []byte(traceId)...)
-//	}
-//
-//	pBuf := make([]byte, 8)
-//	binary.LittleEndian.PutUint64(pBuf, uint64(life))
-//	hBuf = append(hBuf, pBuf...)
-//
-//	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-//		pc.Close()
-//		return err
-//	}
-//
-//	return pc.readResult(0)
-//}
-
-func (pc *PubClient) GetMqList(traceId string) (string, error) {
+func (pc *PubClient) GetTopicList(traceId string) (string, error) {
 	if err := pc.init(); err != nil {
 		return "", err
 	}
