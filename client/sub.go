@@ -2,11 +2,15 @@ package client
 
 import (
 	"encoding/binary"
+	"errors"
 	"log"
+	"sync/atomic"
 	"time"
 )
 
 type AckEnum byte
+
+var TermiteError = errors.New("TermiteError")
 
 func (a AckEnum) Value() byte {
 	return byte(a)
@@ -23,6 +27,7 @@ type SubClient struct {
 	mqName           string
 	who              string
 	maxNoDataTimeout int64
+	termiteState     atomic.Bool
 }
 
 type MessagesAccept func(messages []*SubMessage) AckEnum
@@ -60,12 +65,26 @@ func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duratio
 	return err
 }
 
+func (sc *SubClient) Termite(force bool) {
+	sc.termiteState.Store(true)
+	if force {
+		conn := sc.conn
+		if conn != nil {
+			conn.Close()
+		}
+	}
+}
+
 func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 	var respHeader SubRespHeader
 	var err error
 	lastTime := time.Now().UnixMilli()
 	for {
 		if err = readAll(sc.conn, respHeader.buf[:], sc.ioTimeout); err != nil {
+			if sc.termiteState.Load() {
+				log.Printf("readAll met err, but termite:%v\n", err)
+				return TermiteError
+			}
 			if isTimeoutError(err) {
 				if time.Now().UnixMilli()-lastTime > sc.maxNoDataTimeout {
 					log.Printf("wait message timeout too long,maybe server dead\n")

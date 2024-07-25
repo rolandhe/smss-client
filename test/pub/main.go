@@ -59,7 +59,7 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 		<-notify
 		//base := "thread=%d,index=%d,ggo,Voice of America is the state-owned news network and international radio broadcaster of the United States of America.AlibabaCloud (darwin; arm64) Node.js/v16.14.2 Core/1.0.1 TeaDSL/1 cloud-assist/1.2.5--j8"
 		base := "thread=%d,index=%d,CREATE INDEX idx_name_prefix ON table_name(name(10));little,Voice of America is the state-owned-j20"
-		for i := 1; i <= 10000; i++ {
+		for i := 1; i <= 100000; i++ {
 			body := fmt.Sprintf(base, no, i)
 			msg := client.NewMessage([]byte(body))
 			tid := fmt.Sprintf("tid-%d-%d", no, i)
