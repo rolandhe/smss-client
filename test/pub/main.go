@@ -22,7 +22,7 @@ func main() {
 	//pub()
 	//delay()
 	//changeLf()
-	multi(16)
+	multi(32)
 }
 
 type One struct {
@@ -69,7 +69,7 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 				log.Printf("%v\n", err)
 				break
 			}
-			if i%1000 == 0 {
+			if i%10000 == 0 {
 				log.Printf("finish no=%d,index=%d\n", no, i)
 			}
 		}
