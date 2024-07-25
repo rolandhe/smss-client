@@ -22,7 +22,7 @@ func main() {
 	//pub()
 	//delay()
 	//changeLf()
-	multi(32)
+	multi(16)
 }
 
 type One struct {

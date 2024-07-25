@@ -34,18 +34,18 @@ func sub(who string, eventId int64) {
 		for _, msg := range messages {
 
 			var body string
-			if len(msg.GetPayload()) > 50 {
-				body = string(msg.GetPayload()[len(msg.GetPayload())-50:])
+			if len(msg.GetPayload()) > 500 {
+				body = string(msg.GetPayload()[len(msg.GetPayload())-500:])
 			} else {
 				body = string(msg.GetPayload())
 			}
-			if count > 25599900 || count%100000 == 0 {
-				log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
-			}
+			//if count > 25599900 || count%100000 == 0 {
+			log.Printf("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
+			//}
 			count++
-			if count == 25600000 {
-				count = 0
-			}
+			//if count == 25600000 {
+			//	count = 0
+			//}
 		}
 		return client.Ack
 	})

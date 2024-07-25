@@ -7,12 +7,14 @@ import (
 )
 
 func main() {
-	create()
+	create("order1", time.Second*50)
+	create("order2", time.Second*35)
+	create("order3", time.Second*20)
 	//getTopicList()
 	//delete()
 }
 
-func create() {
+func create(topicName string, delayDuration time.Duration) {
 	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -21,10 +23,14 @@ func create() {
 	defer pc.Close()
 
 	//topicName := "audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-audience-123abcdefg-00900000008"
-	topicName := "order"
+	//topicName := "order2"
 
-	//expireAt := time.Now().Add(time.Minute * 2).UnixMilli()
-	err = pc.CreateTopic(topicName, 0, "tid-2209991")
+	expireAt := int64(0)
+	if delayDuration > 0 {
+		expireAt = time.Now().Add(delayDuration).UnixMilli()
+	}
+
+	err = pc.CreateTopic(topicName, expireAt, "tid-2209991")
 
 	log.Println(err)
 }
