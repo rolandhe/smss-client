@@ -40,33 +40,48 @@ func main() {
 			deleteTopic(name)
 			continue
 		}
-		if strings.HasPrefix(line, "create") {
+		if strings.HasPrefix(line, "create ") {
 			createTopic(line)
+			continue
+		}
+		if line == "help" {
+			doHelp()
 			continue
 		}
 		if line == "quit" {
 			return
 		}
 	}
-
 }
 
 func prompt() {
 	fmt.Print(">")
 }
 
+func doHelp() {
+	fmt.Println("   list: list all topic info,output json")
+	fmt.Println("   create topicName lifetime: create topic")
+	fmt.Println("        -- lifetime is optional, default 0, unit second")
+	fmt.Println("        -- 0 indicates unlimited")
+	fmt.Println("   delete topicName: delete topic")
+	fmt.Println("   quit: quit command line")
+}
+
 func createTopic(line string) {
-	line = strings.TrimSpace(line[len("delete "):])
+	line = strings.TrimSpace(line[len("create "):])
 	items := strings.Split(line, " ")
 	topic := strings.TrimSpace(items[0])
 	life := int64(0)
 	var err error
 	if len(items) > 1 {
 		sLife := strings.TrimSpace(items[1])
-		life, err = strconv.ParseInt(sLife, 10, 64)
+		delay, err := strconv.ParseInt(sLife, 10, 64)
 		if err != nil {
 			fmt.Println(err)
 			return
+		}
+		if delay > 0 {
+			life = time.Now().UnixMilli() + delay*1000
 		}
 	}
 	pub, err := client.NewPubClient(*host, *port, time.Second*120)
