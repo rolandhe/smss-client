@@ -21,10 +21,11 @@ const (
 	CommandCreateTopic CommandEnum = 2
 	CommandDeleteTopic CommandEnum = 3
 
-	CommandDelay   CommandEnum = 16
-	CommandAlive   CommandEnum = 17
-	CommandReplica CommandEnum = 64
-	CommandList    CommandEnum = 100
+	CommandDelay     CommandEnum = 16
+	CommandAlive     CommandEnum = 17
+	CommandReplica   CommandEnum = 64
+	CommandTopicInfo CommandEnum = 65
+	CommandList      CommandEnum = 100
 )
 
 type BizError struct {

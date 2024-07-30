@@ -143,6 +143,26 @@ func (pc *PubClient) DeleteTopic(topicName string, traceId string) error {
 	return pc.readResult(0)
 }
 
+func (pc *PubClient) GetTopicInfo(topicName, traceId string) (string, error) {
+	if err := pc.init(); err != nil {
+		return "", err
+	}
+	traceIdLen := len(traceId)
+	hBuf := make([]byte, HeaderSize)
+	hBuf[0] = CommandTopicInfo.Byte()
+	hBuf[19] = byte(traceIdLen)
+	binary.LittleEndian.PutUint16(hBuf[1:], uint16(len(topicName)))
+	hBuf = append(hBuf, []byte(topicName)...)
+	if traceIdLen > 0 {
+		hBuf = append(hBuf, []byte(traceId)...)
+	}
+	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
+		pc.Close()
+		return "", err
+	}
+	return pc.readMqListResult()
+}
+
 func (pc *PubClient) GetTopicList(traceId string) (string, error) {
 	if err := pc.init(); err != nil {
 		return "", err

@@ -7,10 +7,12 @@ import (
 )
 
 func main() {
-	create("order1", time.Second*50)
-	create("order2", time.Second*35)
-	create("order3", time.Second*20)
+	//create("order1", time.Second*50)
+	//create("order2", time.Second*35)
+	//create("order3", time.Second*20)
 	//getTopicList()
+
+	getTopicInfo()
 	//delete()
 }
 
@@ -46,6 +48,21 @@ func delete() {
 	err = pc.DeleteTopic("temp_topic", "tid-9999del33")
 
 	log.Println(err)
+}
+
+func getTopicInfo() {
+	topicName := "order33"
+	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer pc.Close()
+
+	var j string
+	j, err = pc.GetTopicInfo(topicName, "tid-99yymm009")
+
+	log.Println(j, err)
 }
 
 func getTopicList() {
