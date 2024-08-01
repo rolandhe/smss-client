@@ -17,9 +17,9 @@ func (a AckEnum) Value() byte {
 }
 
 const (
-	Ack            AckEnum = 0
-	ActWithEnd     AckEnum = 1
-	ActWithTermite AckEnum = 2
+	Ack                     AckEnum = 0
+	ActWithEnd              AckEnum = 1
+	ClientTermiteWithoutAck AckEnum = 2
 )
 
 type SubClient struct {
@@ -128,7 +128,7 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		}
 
 		ack := accept(messages)
-		if ActWithTermite == ack {
+		if ClientTermiteWithoutAck == ack {
 			return nil
 		}
 		if err = sc.ack(ack); err != nil {
