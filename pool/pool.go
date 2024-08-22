@@ -9,7 +9,7 @@ import (
 )
 
 var TimeoutError = errors.New("timeout")
-var ShutdownError = errors.New("shutdownCtrl")
+var ShutdownError = errors.New("shutdown")
 
 func NewPool[T any](config *Config, factory ObjectFactory[T]) ObjPool[T] {
 	var shutControl *shutdownControl
