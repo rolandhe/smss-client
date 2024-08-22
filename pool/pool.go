@@ -87,7 +87,7 @@ func (p *pool[T]) ShutDown() {
 	for _, ins := range list {
 		p.lilo.destroyObj(ins)
 	}
-	p.logFunc()("ShutDown")
+	p.logFunc()("ShutDown,destroy objs:%d", len(list))
 }
 
 func (p *pool[T]) Return(ins *T, bad bool) error {
