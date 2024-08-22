@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -15,15 +16,15 @@ func NewPubClient(host string, port int, timeout time.Duration) (*PubClient, err
 	if err != nil {
 		return nil, err
 	}
+	if err = nw.init(); err != nil {
+		return nil, err
+	}
 	return &PubClient{
 		network: nw,
 	}, nil
 }
 
 func (pc *PubClient) Publish(topicName string, msg *Message, traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
 	payload := msg.ToBytes()
 	payLoadLen := len(payload)
 	if payLoadLen <= 8 {
@@ -57,9 +58,6 @@ func (pc *PubClient) Publish(topicName string, msg *Message, traceId string) err
 }
 
 func (pc *PubClient) PublishDelay(topicName string, msg *Message, delayMils int64, traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
 	payload := msg.ToBytes()
 	payLoadLen := len(payload)
 	if payLoadLen <= 8 {
@@ -96,9 +94,6 @@ func (pc *PubClient) PublishDelay(topicName string, msg *Message, delayMils int6
 }
 
 func (pc *PubClient) CreateTopic(topicName string, life int64, traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
 	hBuf[0] = CommandCreateTopic.Byte()
@@ -123,9 +118,6 @@ func (pc *PubClient) CreateTopic(topicName string, life int64, traceId string) e
 }
 
 func (pc *PubClient) DeleteTopic(topicName string, traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
 	hBuf[0] = CommandDeleteTopic.Byte()
@@ -144,9 +136,6 @@ func (pc *PubClient) DeleteTopic(topicName string, traceId string) error {
 }
 
 func (pc *PubClient) GetTopicInfo(topicName, traceId string) (string, error) {
-	if err := pc.init(); err != nil {
-		return "", err
-	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
 	hBuf[0] = CommandTopicInfo.Byte()
@@ -164,9 +153,6 @@ func (pc *PubClient) GetTopicInfo(topicName, traceId string) (string, error) {
 }
 
 func (pc *PubClient) GetTopicList(traceId string) (string, error) {
-	if err := pc.init(); err != nil {
-		return "", err
-	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
 	hBuf[0] = CommandList.Byte()
@@ -182,9 +168,6 @@ func (pc *PubClient) GetTopicList(traceId string) (string, error) {
 }
 
 func (pc *PubClient) Alive(traceId string) error {
-	if err := pc.init(); err != nil {
-		return err
-	}
 	traceIdLen := len(traceId)
 	hBuf := make([]byte, HeaderSize)
 	hBuf[0] = CommandAlive.Byte()
@@ -197,6 +180,10 @@ func (pc *PubClient) Alive(traceId string) error {
 		return err
 	}
 	return pc.readResult(0)
+}
+
+func (pc *PubClient) String() string {
+	return fmt.Sprintf("PubClient(%s)", pc.conn.RemoteAddr())
 }
 
 func (pc *PubClient) readResult(timeout time.Duration) error {

@@ -2,18 +2,38 @@ package main
 
 import (
 	"github.com/rolandhe/smss/smss-client/client"
+	"github.com/rolandhe/smss/smss-client/test/config"
 	"log"
 	"time"
 )
 
 func main() {
-	//create("order1", time.Second*50)
+	create("order", 0)
 	//create("order2", time.Second*35)
 	//create("order3", time.Second*20)
 	//getTopicList()
 
-	getTopicInfo()
+	//getTopicInfo()
 	//delete()
+	poolTest()
+
+}
+
+func poolTest() {
+	pcPool := client.NewPubClientPool(config.NewConfig(), "localhost", 12301, time.Second*5)
+	pc, err := pcPool.Borrow()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	var j string
+	j, err = pc.GetTopicInfo("order", "tid-99yymm009")
+
+	log.Println(j, err)
+	pc.Close()
+
+	time.Sleep(time.Second * 300)
+	pcPool.ShutDown()
 }
 
 func create(topicName string, delayDuration time.Duration) {

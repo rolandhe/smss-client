@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	who     = flag.String("who", "", "subscriber who")
+	who     = flag.String("who", "vvi", "subscriber who")
 	eventId = flag.Int64("event", 0, "event id")
 )
 
