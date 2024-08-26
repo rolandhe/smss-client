@@ -126,7 +126,7 @@ func (p *pool[T]) Return(ins *T, bad bool) error {
 		return nil
 	}
 	if p.config.LogDebug {
-		p.logFunc()("Return object %v,%v", addRet, wrap)
+		p.logFunc()("Return object add=%v,%v", addRet, wrap)
 	}
 
 	return nil
@@ -431,6 +431,14 @@ func newSema(max int) *semaWithCounter {
 }
 
 func (sc *semaWithCounter) acquire(d time.Duration) (bool, int64) {
+	if d == 0 {
+		return sc.quickAcquire()
+	}
+	if d < 0 {
+		sc.ch <- struct{}{}
+		c := sc.counter.Add(1)
+		return true, c
+	}
 	select {
 	case sc.ch <- struct{}{}:
 		c := sc.counter.Add(1)

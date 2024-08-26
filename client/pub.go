@@ -9,6 +9,7 @@ import (
 
 type PubClient struct {
 	*network
+	fetal bool
 }
 
 func NewPubClient(host string, port int, timeout time.Duration) (*PubClient, error) {
@@ -48,7 +49,7 @@ func (pc *PubClient) Publish(topicName string, msg *Message, traceId string) err
 	payload = nil
 
 	if err := writeAll(pc.conn, buf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return err
 	}
 
@@ -84,7 +85,7 @@ func (pc *PubClient) PublishDelay(topicName string, msg *Message, delayMils int6
 	payload = nil
 
 	if err := writeAll(pc.conn, buf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return err
 	}
 
@@ -110,7 +111,7 @@ func (pc *PubClient) CreateTopic(topicName string, life int64, traceId string) e
 	hBuf = append(hBuf, pBuf...)
 
 	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return err
 	}
 
@@ -128,7 +129,7 @@ func (pc *PubClient) DeleteTopic(topicName string, traceId string) error {
 		hBuf = append(hBuf, []byte(traceId)...)
 	}
 	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return err
 	}
 
@@ -146,7 +147,7 @@ func (pc *PubClient) GetTopicInfo(topicName, traceId string) (string, error) {
 		hBuf = append(hBuf, []byte(traceId)...)
 	}
 	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return "", err
 	}
 	return pc.readMqListResult()
@@ -161,7 +162,7 @@ func (pc *PubClient) GetTopicList(traceId string) (string, error) {
 		hBuf = append(hBuf, []byte(traceId)...)
 	}
 	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return "", err
 	}
 	return pc.readMqListResult()
@@ -176,7 +177,7 @@ func (pc *PubClient) Alive(traceId string) error {
 		hBuf = append(hBuf, []byte(traceId)...)
 	}
 	if err := writeAll(pc.conn, hBuf, pc.ioTimeout); err != nil {
-		pc.Close()
+		pc.fetal = true
 		return err
 	}
 	return pc.readResult(0)
@@ -190,57 +191,48 @@ func (pc *PubClient) readResult(timeout time.Duration) error {
 	if timeout == 0 {
 		timeout = pc.ioTimeout
 	}
-	f := func() error {
-		buf := make([]byte, RespHeaderSize)
-		if err := readAll(pc.conn, buf, timeout); err != nil {
-			return err
-		}
-
-		code := binary.LittleEndian.Uint16(buf)
-		if code == OkCode || code == AliveCode {
-			return nil
-		}
-		if code != ErrCode {
-			return errors.New("not support code")
-		}
-		errMsgLen := int(binary.LittleEndian.Uint16(buf[2:]))
-		return readErrCodeMsg(pc.conn, errMsgLen, pc.ioTimeout)
+	buf := make([]byte, RespHeaderSize)
+	if err := readAll(pc.conn, buf, timeout); err != nil {
+		return err
 	}
-	var err error
-	defer func() {
-		if err != nil && !IsBizErr(err) {
-			pc.Close()
-		}
-	}()
-	err = f()
+
+	code := binary.LittleEndian.Uint16(buf)
+	if code == OkCode || code == AliveCode {
+		return nil
+	}
+	if code != ErrCode {
+		pc.fetal = true
+		return errors.New("not support code")
+	}
+	errMsgLen := int(binary.LittleEndian.Uint16(buf[2:]))
+	err := readErrCodeMsg(pc.conn, errMsgLen, pc.ioTimeout)
+
+	if err != nil && !IsBizErr(err) {
+		pc.fetal = true
+	}
+
 	return err
 }
 
 func (pc *PubClient) readMqListResult() (string, error) {
-	f := func() (string, error) {
-		buf := make([]byte, RespHeaderSize)
-		if err := readAll(pc.conn, buf, pc.ioTimeout); err != nil {
-			return "", err
-		}
-
-		code := binary.LittleEndian.Uint16(buf)
-		if code == OkCode {
-			bodyLen := int(binary.LittleEndian.Uint32(buf[2:]))
-			return readMQListBody(pc.conn, bodyLen, pc.ioTimeout)
-		}
-		if code != ErrCode {
-			return "", errors.New("not suport code")
-		}
-		errMsgLen := int(binary.LittleEndian.Uint16(buf[2:]))
-		return "", readErrCodeMsg(pc.conn, errMsgLen, pc.ioTimeout)
+	buf := make([]byte, RespHeaderSize)
+	if err := readAll(pc.conn, buf, pc.ioTimeout); err != nil {
+		return "", err
 	}
-	var err error
-	defer func() {
-		if err != nil && !IsBizErr(err) {
-			pc.Close()
-		}
-	}()
-	var ret string
-	ret, err = f()
-	return ret, err
+
+	code := binary.LittleEndian.Uint16(buf)
+	if code == OkCode {
+		bodyLen := int(binary.LittleEndian.Uint32(buf[2:]))
+		return readMQListBody(pc.conn, bodyLen, pc.ioTimeout)
+	}
+	if code != ErrCode {
+		pc.fetal = true
+		return "", errors.New("not suport code")
+	}
+	errMsgLen := int(binary.LittleEndian.Uint16(buf[2:]))
+	err := readErrCodeMsg(pc.conn, errMsgLen, pc.ioTimeout)
+	if err != nil && !IsBizErr(err) {
+		pc.fetal = true
+	}
+	return "", err
 }

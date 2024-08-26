@@ -13,15 +13,7 @@ type PooledPubClient struct {
 }
 
 func (ppc *PooledPubClient) Close() {
-	ppc.pubPool.Return(ppc.PubClient, false)
-}
-
-func (ppc *PooledPubClient) CloseWithError(err error) {
-	if err == nil {
-		ppc.Close()
-		return
-	}
-	ppc.pubPool.Return(ppc.PubClient, true)
+	ppc.pubPool.Return(ppc.PubClient, ppc.fetal)
 }
 
 type PubClientPool struct {
@@ -36,8 +28,8 @@ func (ppool *PubClientPool) Borrow() (*PooledPubClient, error) {
 	return &PooledPubClient{o, ppool.internalPool}, nil
 }
 
-func (ppool *PubClientPool) Return(ins *PooledPubClient, bad bool) error {
-	return ppool.internalPool.Return(ins.PubClient, bad)
+func (ppool *PubClientPool) Return(ins *PooledPubClient) error {
+	return ppool.internalPool.Return(ins.PubClient, ins.fetal)
 }
 
 func (ppool *PubClientPool) ShutDown() {
