@@ -18,7 +18,7 @@ func (a AckEnum) Value() byte {
 
 const (
 	Ack                     AckEnum = 0
-	ActWithEnd              AckEnum = 1
+	AckWithEnd              AckEnum = 1
 	ClientTermiteWithoutAck AckEnum = 2
 )
 
@@ -134,7 +134,7 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		if err = sc.ack(ack); err != nil {
 			return err
 		}
-		if ack == ActWithEnd {
+		if ack == AckWithEnd {
 			return nil
 		}
 	}
@@ -147,7 +147,7 @@ func (sc *SubClient) ack(ack AckEnum) error {
 }
 
 func (sc *SubClient) calPackageSize() int {
-	size := 20
+	size := HeaderSize
 	size += len(sc.mqName)
 	size += 4
 	size += len(sc.who)
@@ -188,7 +188,7 @@ func (srh *SubRespHeader) GetCode() int {
 }
 
 func (srh *SubRespHeader) GetMessageCount() int {
-	return int(srh.buf[2])
+	return int(srh.buf[2] & 0xFF)
 }
 
 func (srh *SubRespHeader) GetPayloadSize() int {

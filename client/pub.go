@@ -227,7 +227,7 @@ func (pc *PubClient) readMqListResult() (string, error) {
 	}
 	if code != ErrCode {
 		pc.fetal = true
-		return "", errors.New("not suport code")
+		return "", errors.New("not support code")
 	}
 	errMsgLen := int(binary.LittleEndian.Uint16(buf[2:]))
 	err := readErrCodeMsg(pc.conn, errMsgLen, pc.ioTimeout)

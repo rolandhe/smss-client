@@ -79,11 +79,6 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 }
 
 func pub() {
-	//pc, err := client.NewPubClient("localhost", 12301, time.Second*5000)
-	//if err != nil {
-	//	log.Printf("%v\n", err)
-	//	return
-	//}
 	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
 	defer pcPool.ShutDown()
 
