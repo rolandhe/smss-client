@@ -123,12 +123,8 @@ func delay() {
 	msg := client.NewMessage([]byte("delay-test 99999-" + strconv.Itoa(i)))
 	msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
 	err = pc.PublishDelay("order", msg, 10*60*1000, "tid-777777")
-
-	log.Printf("222 %v\n", err)
-
-	err = pc.Alive("")
 	log.Printf("%v\n", err)
-
+	time.Sleep(time.Second * 60)
 }
 
 //func changeLf() {

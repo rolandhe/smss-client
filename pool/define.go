@@ -31,7 +31,7 @@ func NewDefaultConfig() *Config {
 		MaxSize: 20,
 		MinSize: 5,
 
-		MaxLifetime: 1000 * 60,
+		MaxLifetime: 1000 * 60 * 30,
 
 		LogFunc: func(format string, v ...any) {
 			log.Printf(format, v...)
