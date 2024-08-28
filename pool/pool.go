@@ -18,6 +18,8 @@ func NewPool[T any](config *Config, factory ObjectFactory[T]) ObjPool[T] {
 			shutdownChan: make(chan struct{}),
 			waitChan:     make(chan struct{}),
 		}
+	} else {
+		shutControl = &shutdownControl{}
 	}
 	if config.LogFunc == nil {
 		config.LogFunc = func(format string, v ...any) {}
@@ -111,7 +113,7 @@ func (p *pool[T]) Return(ins *T, bad bool) error {
 	}
 	if p.config.TestOnReturn {
 		if err := p.lilo.valid(ins); err != nil {
-			p.logFunc()("Return invalid obj, ping failed, obj is:%v", wrap)
+			p.logFunc()("Return invalid obj, ping failed, obj is:%v,err:%v", wrap, err)
 			p.lilo.destroyObj(ins)
 			return err
 		}

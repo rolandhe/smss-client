@@ -42,7 +42,10 @@ func poolTest() {
 }
 
 func create(topicName string, delayDuration time.Duration) {
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -63,7 +66,10 @@ func create(topicName string, delayDuration time.Duration) {
 }
 
 func delete() {
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*500)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -77,7 +83,10 @@ func delete() {
 
 func getTopicInfo() {
 	topicName := "order33"
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -91,7 +100,10 @@ func getTopicInfo() {
 }
 
 func getTopicList() {
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -105,7 +117,10 @@ func getTopicList() {
 }
 
 func getValidTopicList() {
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*5)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return

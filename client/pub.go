@@ -65,7 +65,7 @@ func (pc *PubClient) PublishDelay(topicName string, msg *Message, delayMils int6
 		return errors.New("empty message")
 	}
 	traceIdLen := len(traceId)
-	buf := make([]byte, HeaderSize+len(topicName)+len(payload)+12+traceIdLen)
+	buf := make([]byte, HeaderSize+len(topicName)+len(payload)+8+traceIdLen)
 	buf[0] = CommandDelay.Byte()
 	buf[19] = byte(traceIdLen)
 	binary.LittleEndian.PutUint16(buf[1:], uint16(len(topicName)))

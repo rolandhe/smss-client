@@ -20,8 +20,8 @@ func main() {
 	//}
 	//_, ok := p.(*Two)
 	//log.Println(ok)
-	pub()
-	//delay()
+	//pub()
+	delay()
 	//changeLf()
 	//multi(32)
 }
@@ -94,7 +94,7 @@ func pub() {
 	for i := 0; i < 100000; i++ {
 		buf := []byte(base + strconv.Itoa(i))
 		msg := client.NewMessage(buf)
-		msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
+		msg.AddHeader("traceId", fmt.Sprintf("tid-pub-%d", i))
 		err = pc.Publish("order", msg, "tid-999pxxfdb11")
 		if err != nil {
 			log.Printf("%v\n", err)
@@ -109,17 +109,24 @@ func pub() {
 }
 
 func delay() {
-	pc, err := client.NewPubClient("localhost", 12301, time.Second*50000)
+	pcPool := client.NewPubClientPool(pool.NewDefaultConfig(), "localhost", 12301, time.Second*5)
+	defer pcPool.ShutDown()
+	pc, err := pcPool.Borrow()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
 	}
+	defer pc.Close()
 
 	i := 11
 
 	msg := client.NewMessage([]byte("delay-test 99999-" + strconv.Itoa(i)))
 	msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
 	err = pc.PublishDelay("order", msg, 10*60*1000, "tid-777777")
+
+	log.Printf("222 %v\n", err)
+
+	err = pc.Alive("")
 	log.Printf("%v\n", err)
 
 }
