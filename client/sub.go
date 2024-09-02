@@ -33,7 +33,7 @@ type SubClient struct {
 type MessagesAccept func(messages []*SubMessage) AckEnum
 
 func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*SubClient, error) {
-	nw, err := newNetwork(host, port, timeout)
+	nw, err := newNetwork(host, port, timeout, true)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +47,6 @@ func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*S
 
 func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
 	var err error
-	defer func() {
-		if err != nil && !IsBizErr(err) {
-			sc.Close()
-		}
-	}()
-	if err = sc.init(); err != nil {
-		return err
-	}
 	buf := sc.packageSubCmd(eventId, batchSize, ackTimeout)
 	if err = writeAll(sc.conn, buf, sc.ioTimeout); err != nil {
 		return err
@@ -65,14 +57,9 @@ func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duratio
 	return err
 }
 
-func (sc *SubClient) Termite(force bool) {
+func (sc *SubClient) Termite() {
 	sc.termiteState.Store(true)
-	if force {
-		conn := sc.conn
-		if conn != nil {
-			conn.Close()
-		}
-	}
+	sc.Close()
 }
 
 func (sc *SubClient) waitMessage(accept MessagesAccept) error {

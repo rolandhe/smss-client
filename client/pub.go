@@ -13,7 +13,7 @@ type PubClient struct {
 }
 
 func NewPubClient(host string, port int, timeout time.Duration) (*PubClient, error) {
-	nw, err := newNetwork(host, port, timeout)
+	nw, err := newNetwork(host, port, timeout, false)
 	if err != nil {
 		return nil, err
 	}

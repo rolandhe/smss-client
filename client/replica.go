@@ -13,7 +13,7 @@ type ReplicaClient struct {
 }
 
 func NewReplicaClient(host string, port int, timeout time.Duration) (*ReplicaClient, error) {
-	nw, err := newNetwork(host, port, timeout)
+	nw, err := newNetwork(host, port, timeout, false)
 	if err != nil {
 		return nil, err
 	}

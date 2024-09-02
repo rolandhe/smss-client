@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -52,6 +53,8 @@ type network struct {
 	conn           net.Conn
 	connectTimeout time.Duration
 	ioTimeout      time.Duration
+	multi          bool
+	sync.Mutex
 }
 
 func (nw *network) init() error {
@@ -66,6 +69,11 @@ func (nw *network) init() error {
 	return nil
 }
 func (nw *network) Close() {
+	if nw.multi {
+		nw.Lock()
+		defer nw.Unlock()
+	}
+
 	if nw.conn == nil {
 		return
 	}
@@ -73,12 +81,13 @@ func (nw *network) Close() {
 	nw.conn = nil
 }
 
-func newNetwork(host string, port int, timeout time.Duration) (*network, error) {
+func newNetwork(host string, port int, timeout time.Duration, multi bool) (*network, error) {
 	nw := &network{
 		host:           host,
 		port:           port,
 		connectTimeout: timeout,
 		ioTimeout:      timeout,
+		multi:          multi,
 	}
 	if err := nw.init(); err != nil {
 		return nil, err
