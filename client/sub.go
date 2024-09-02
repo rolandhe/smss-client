@@ -3,7 +3,7 @@ package client
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/rolandhe/smss/smss-client/log"
+	"github.com/rolandhe/smss/smss-client/logger"
 	"sync/atomic"
 	"time"
 )
@@ -53,7 +53,7 @@ func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duratio
 	}
 	err = sc.waitMessage(accept)
 
-	log.Infof("wait message:%v", err)
+	logger.Infof("wait message:%v", err)
 	return err
 }
 
@@ -69,15 +69,15 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 	for {
 		if err = readAll(sc.conn, respHeader.buf[:], sc.ioTimeout); err != nil {
 			if sc.termiteState.Load() {
-				log.Infof("readAll met err, but termite:%v", err)
+				logger.Infof("readAll met err, but termite:%v", err)
 				return TermiteError
 			}
 			if isTimeoutError(err) {
 				if time.Now().UnixMilli()-lastTime > sc.maxNoDataTimeout {
-					log.Infof("wait message timeout too long,maybe server dead")
+					logger.Infof("wait message timeout too long,maybe server dead")
 					return err
 				}
-				log.Infof("wait message timeout,continue...")
+				logger.Infof("wait message timeout,continue...")
 				continue
 			}
 			return err
@@ -89,18 +89,18 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		}
 
 		if code == SubEndCode {
-			log.Infof("peer notify to end,maybe mq deleted,end sub")
+			logger.Infof("peer notify to end,maybe mq deleted,end sub")
 			return nil
 		}
 
 		lastTime = time.Now().UnixMilli()
 		if code == AliveCode {
-			log.Infof("sub is alive")
+			logger.Infof("sub is alive")
 			continue
 		}
 
 		if code != OkCode {
-			log.Infof("not support response code")
+			logger.Infof("not support response code")
 			return nil
 		}
 

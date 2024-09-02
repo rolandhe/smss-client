@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/rolandhe/smss/smss-client/client"
+	"github.com/rolandhe/smss/smss-client/logger"
 	"github.com/rolandhe/smss/smss-client/pool"
-	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -19,7 +19,7 @@ func main() {
 	//	},
 	//}
 	//_, ok := p.(*Two)
-	//log.Println(ok)
+	//logger.Println(ok)
 	//pub()
 	delay()
 	//changeLf()
@@ -46,14 +46,14 @@ func multi(count int) {
 	wg.Wait()
 	end := time.Now().UnixMilli()
 
-	log.Printf("finish all threads,cost:%d ms", end-start)
+	logger.Infof("finish all threads,cost:%d ms", end-start)
 }
 
 func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 	go func() {
 		pc, err := client.NewPubClient("localhost", 12301, time.Second*50000)
 		if err != nil {
-			log.Printf("%v\n", err)
+			logger.Infof("%v\n", err)
 			return
 		}
 		defer pc.Close()
@@ -67,11 +67,11 @@ func thread(no int, wg *sync.WaitGroup, notify chan struct{}) {
 			msg.AddHeader("traceId", tid)
 			err = pc.Publish("order", msg, tid)
 			if err != nil {
-				log.Printf("%v\n", err)
+				logger.Infof("%v\n", err)
 				break
 			}
 			if i%10000 == 0 {
-				log.Printf("finish no=%d,index=%d\n", no, i)
+				logger.Infof("finish no=%d,index=%d\n", no, i)
 			}
 		}
 		wg.Done()
@@ -84,7 +84,7 @@ func pub() {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -97,14 +97,14 @@ func pub() {
 		msg.AddHeader("traceId", fmt.Sprintf("tid-pub-%d", i))
 		err = pc.Publish("order", msg, "tid-999pxxfdb11")
 		if err != nil {
-			log.Printf("%v\n", err)
+			logger.Infof("%v\n", err)
 			break
 		}
 		if i%50 == 0 {
-			log.Printf("finish %d\n", i)
+			logger.Infof("finish %d\n", i)
 		}
 
-		//log.Println("next")
+		//logger.Println("next")
 	}
 }
 
@@ -113,7 +113,7 @@ func delay() {
 	defer pcPool.ShutDown()
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -123,19 +123,19 @@ func delay() {
 	msg := client.NewMessage([]byte("delay-test 99999-" + strconv.Itoa(i)))
 	msg.AddHeader("traceId", fmt.Sprintf("tid-%d", i))
 	err = pc.PublishDelay("order", msg, 10*60*1000, "tid-777777")
-	log.Printf("%v\n", err)
+	logger.Infof("%v\n", err)
 	time.Sleep(time.Second * 60)
 }
 
 //func changeLf() {
 //	pc, err := client.NewPubClient("localhost", 8080, time.Second*30)
 //	if err != nil {
-//		log.Printf("%v\n", err)
+//		logger.Printf("%v\n", err)
 //		return
 //	}
 //
 //	defer pc.Close()
 //
 //	err = pc.ChangeMqLife("temp_mq", time.Now().Add(time.Second*10).UnixMilli(), "tid-999999")
-//	log.Printf("%v\n", err)
+//	logger.Printf("%v\n", err)
 //}

@@ -3,7 +3,7 @@ package pool
 import (
 	"errors"
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/log"
+	"github.com/rolandhe/smss/smss-client/logger"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -58,7 +58,7 @@ func (p *pool[T]) Borrow() (*T, error) {
 	}
 	ok, _ := p.sema.acquire(p.config.WaitTimeout)
 	if !ok {
-		log.Infof("Borrow to get sema timeout")
+		logger.Infof("Borrow to get sema timeout")
 		return nil, TimeoutError
 	}
 	if o := p.quickBorrow(); o != nil {
@@ -68,11 +68,11 @@ func (p *pool[T]) Borrow() (*T, error) {
 	created, err := p.lilo.createObj(p.config.MaxLifetime)
 	if err != nil {
 		p.sema.release()
-		log.Infof("Borrow create object err:%v", err)
+		logger.Infof("Borrow create object err:%v", err)
 		return nil, err
 	}
 	if p.config.LogDebug {
-		log.Infof("Borrowed new object,%v", created)
+		logger.Infof("Borrowed new object,%v", created)
 	}
 	return created, nil
 }
@@ -88,31 +88,31 @@ func (p *pool[T]) ShutDown() {
 	for _, ins := range list {
 		p.lilo.destroyObj(ins)
 	}
-	log.Infof("ShutDown,destroy objs:%d", len(list))
+	logger.Infof("ShutDown,destroy objs:%d", len(list))
 }
 
 func (p *pool[T]) Return(ins *T, bad bool) error {
 	wo, ok := p.lilo.exists(ins)
 	if !ok {
-		log.Infof("return unknown object")
+		logger.Infof("return unknown object")
 		return errors.New("no such borrowed object")
 	}
 	defer p.sema.release()
 
 	wrap := wo.(*wrapObj[T])
 	if bad || wrap.isExpired(time.Now().UnixMilli()) {
-		log.Infof("Return invalid obj, bad? %v, obj is:%v", bad, wrap)
+		logger.Infof("Return invalid obj, bad? %v, obj is:%v", bad, wrap)
 		p.lilo.destroyObj(ins)
 		return nil
 	}
 	if p.shutdownCtrl.showdownState.Load() {
-		log.Infof("Return valid obj, but pool shut down, destroy, obj is:%v", wrap)
+		logger.Infof("Return valid obj, but pool shut down, destroy, obj is:%v", wrap)
 		p.lilo.destroyObj(ins)
 		return nil
 	}
 	if p.config.TestOnReturn {
 		if err := p.lilo.valid(ins); err != nil {
-			log.Infof("Return invalid obj, ping failed, obj is:%v,err:%v", wrap, err)
+			logger.Infof("Return invalid obj, ping failed, obj is:%v,err:%v", wrap, err)
 			p.lilo.destroyObj(ins)
 			return err
 		}
@@ -122,12 +122,12 @@ func (p *pool[T]) Return(ins *T, bad bool) error {
 	})
 
 	if !addRet {
-		log.Infof("Return valid obj, but pool shut down, destroy, obj is:%v", wrap)
+		logger.Infof("Return valid obj, but pool shut down, destroy, obj is:%v", wrap)
 		p.lilo.destroyObj(ins)
 		return nil
 	}
 	if p.config.LogDebug {
-		log.Infof("Return object add=%v,%v", addRet, wrap)
+		logger.Infof("Return object add=%v,%v", addRet, wrap)
 	}
 
 	return nil
@@ -140,13 +140,13 @@ func (p *pool[T]) quickBorrow() *T {
 	}
 	if p.config.TestOnBorrow {
 		if err := p.lilo.valid(o.obj); err != nil {
-			log.Infof("Borrow pooled object,but Valid failed,to create")
+			logger.Infof("Borrow pooled object,but Valid failed,to create")
 			p.lilo.destroyObj(o.obj)
 			return nil
 		}
 	}
 	if p.config.LogDebug {
-		log.Infof("Borrowed pooled object,%v", o)
+		logger.Infof("Borrowed pooled object,%v", o)
 	}
 	return o.obj
 }
@@ -154,7 +154,7 @@ func (p *pool[T]) quickBorrow() *T {
 func (p *pool[T]) checkInvalidObjs() {
 	got, _ := p.sema.quickAcquire()
 	if !got {
-		log.Infof("checkInvalidObjs get token fail")
+		logger.Infof("checkInvalidObjs get token fail")
 		return
 	}
 	defer p.sema.release()
@@ -162,12 +162,12 @@ func (p *pool[T]) checkInvalidObjs() {
 	count := 0
 	for {
 		if o == nil {
-			log.Infof("checkInvalidObjs finish,checked:%d", count)
+			logger.Infof("checkInvalidObjs finish,checked:%d", count)
 			return
 		}
 		count++
 		if o.isExpired(time.Now().UnixMilli()) {
-			log.Infof("checkInvalidObjs,pooled obj expired,%v", o)
+			logger.Infof("checkInvalidObjs,pooled obj expired,%v", o)
 			p.lilo.destroyObj(o.obj)
 			o = p.lilo.conditionGet(till)
 			continue
@@ -176,18 +176,18 @@ func (p *pool[T]) checkInvalidObjs() {
 		if !p.config.TestOnCheck {
 			p.lilo.add(o, nil)
 			if p.config.LogDebug {
-				log.Infof("checkInvalidObjs, not need to valid, restore", o)
+				logger.Infof("checkInvalidObjs, not need to valid, restore", o)
 			}
 			o = p.lilo.conditionGet(till)
 			continue
 		}
 		if err := p.lilo.valid(o.obj); err != nil {
-			log.Infof("checkInvalidObjs, pooled obj %v ping err:%v", o, err)
+			logger.Infof("checkInvalidObjs, pooled obj %v ping err:%v", o, err)
 			p.lilo.destroyObj(o.obj)
 		} else {
 			p.lilo.add(o, nil)
 			if p.config.LogDebug {
-				log.Infof("checkInvalidObjs, valid ok, restore:%v", o)
+				logger.Infof("checkInvalidObjs, valid ok, restore:%v", o)
 			}
 		}
 		o = p.lilo.conditionGet(till)
@@ -199,28 +199,28 @@ func (p *pool[T]) keepMinObjs() {
 	for p.keepOneObject() {
 		count++
 	}
-	log.Infof("keepMinObjs new pooled obj count:%d", count)
+	logger.Infof("keepMinObjs new pooled obj count:%d", count)
 }
 
 func (p *pool[T]) keepOneObject() bool {
 	ok, c := p.sema.quickAcquire()
 	if !ok {
-		log.Infof("keepOneObject get sema failed")
+		logger.Infof("keepOneObject get sema failed")
 		return false
 	}
 	defer p.sema.release()
 	if c-1 >= int64(p.config.MinSize) {
-		log.Infof("keepOneObject pooled obj count is enough")
+		logger.Infof("keepOneObject pooled obj count is enough")
 		return false
 	}
 	size := p.lilo.size()
 	if p.config.MinSize <= size+int(c-1) {
-		log.Infof("keepOneObject pooled obj count is enough,no used in lilo:%d", size)
+		logger.Infof("keepOneObject pooled obj count is enough,no used in lilo:%d", size)
 		return false
 	}
 	o, err := p.lilo.createObj(p.config.MaxLifetime)
 	if err != nil {
-		log.Infof("keepOneObject met err:%v", err)
+		logger.Infof("keepOneObject met err:%v", err)
 		return false
 	}
 
@@ -228,12 +228,12 @@ func (p *pool[T]) keepOneObject() bool {
 		return p.sema.getCount()-1+size < int64(p.config.MinSize)
 	}) {
 		p.lilo.destroyObj(o)
-		log.Infof("keepOneObject safe add failed,because count is enough")
+		logger.Infof("keepOneObject safe add failed,because count is enough")
 		return false
 	}
 
 	if p.config.LogDebug {
-		log.Infof("keepOneObject, create new object:%v", o)
+		logger.Infof("keepOneObject, create new object:%v", o)
 	}
 
 	return true

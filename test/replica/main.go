@@ -9,7 +9,7 @@ import (
 func main() {
 	rc, err := client.NewReplicaClient("localhost", 8080, time.Second*5)
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 

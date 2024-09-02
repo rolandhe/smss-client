@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/rolandhe/smss/smss-client/client"
+	"github.com/rolandhe/smss/smss-client/logger"
 	"github.com/rolandhe/smss/smss-client/pool"
 	"log"
 	"time"
@@ -47,7 +48,7 @@ func create(topicName string, delayDuration time.Duration) {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -71,7 +72,7 @@ func delete() {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -88,7 +89,7 @@ func getTopicInfo() {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -105,7 +106,7 @@ func getTopicList() {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
@@ -122,7 +123,7 @@ func getValidTopicList() {
 
 	pc, err := pcPool.Borrow()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Infof("%v\n", err)
 		return
 	}
 	defer pc.Close()
