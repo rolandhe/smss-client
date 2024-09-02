@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/rolandhe/smss/smss-client/dlock"
-	"log"
+	"github.com/rolandhe/smss/smss-client/log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,7 +63,7 @@ func (sub *dLockedSub) doWatch(watchChan <-chan dlock.WatchState, r *watchRunnin
 			continue
 		}
 		if state == dlock.Locked {
-			log.Printf("get lock,and start thread to subscribe\n")
+			log.Infof("get lock,and start thread to subscribe")
 			go func() {
 				r.run()
 				close(r.closeChan)
@@ -71,11 +71,11 @@ func (sub *dLockedSub) doWatch(watchChan <-chan dlock.WatchState, r *watchRunnin
 			continue
 		}
 		if state == dlock.LostLock {
-			log.Printf("loss lock,release resource\n")
+			log.Infof("loss lock,release resource")
 			r.cleanResource()
 			continue
 		}
-		log.Printf("lock state %v\n", state)
+		log.Infof("lock state %v", state)
 	}
 }
 
@@ -115,16 +115,16 @@ func (r *watchRunning) runCore() {
 		client, err = r.clientCreateFunc()
 		if err != nil {
 			if r.closedState.Load() {
-				log.Printf("subcribe closed,no client,return\n")
+				log.Infof("subcribe closed,no client,return")
 				return
 			}
-			log.Printf("connect smss server err,sleep 5s:%v\n", err)
+			log.Infof("connect smss server err,sleep 5s:%v", err)
 			time.Sleep(time.Second * 5)
 			continue
 		}
 		if r.closedState.Load() {
 			client.Close()
-			log.Printf("subcribe closed,release client,return\n")
+			log.Infof("subcribe closed,release client,return")
 			return
 		}
 		break
@@ -133,13 +133,13 @@ func (r *watchRunning) runCore() {
 	r.Lock()
 	if r.closedState.Load() {
 		client.Close()
-		log.Printf("subcribe closed,release client,return\n")
+		log.Infof("subcribe closed,release client,return")
 		return
 	}
 	r.runClient = client
 	r.Unlock()
 
-	log.Printf("to subcribe,eventId=%d\n", r.eventId)
+	log.Infof("to subcribe,eventId=%d\n", r.eventId)
 	err = client.Sub(r.eventId, r.batchSize, r.ackTimeout, func(messages []*SubMessage) AckEnum {
 		last := messages[len(messages)-1]
 		ret := r.accept(messages)
@@ -147,7 +147,7 @@ func (r *watchRunning) runCore() {
 		return ret
 	})
 
-	log.Printf("sub error:%v\n", err)
+	log.Infof("sub error:%v", err)
 
 }
 
@@ -161,7 +161,7 @@ func (r *watchRunning) cleanResource() {
 
 	if client != nil {
 		client.Close()
-		log.Printf("subcribe end,client close\n")
+		log.Infof("subcribe end,client close")
 		<-r.closeChan
 	}
 }

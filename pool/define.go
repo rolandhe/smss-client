@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"log"
 	"time"
 )
 
@@ -33,9 +32,6 @@ func NewDefaultConfig() *Config {
 
 		MaxLifetime: 1000 * 60 * 30,
 
-		LogFunc: func(format string, v ...any) {
-			log.Printf(format, v...)
-		},
 		LogDebug: true,
 	}
 }
@@ -56,6 +52,5 @@ type Config struct {
 
 	MaxLifetime int
 
-	LogFunc  func(format string, v ...any)
 	LogDebug bool
 }

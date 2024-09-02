@@ -2,7 +2,7 @@ package client
 
 import (
 	"encoding/binary"
-	"log"
+	"github.com/rolandhe/smss/smss-client/log"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +40,7 @@ func (rc *ReplicaClient) Replica(seqId int64) error {
 	}
 	err = rc.waitMessage()
 
-	log.Printf("wait message:%v\n", err)
+	log.Infof("wait message:%v", err)
 	return err
 }
 
@@ -51,7 +51,7 @@ func (rc *ReplicaClient) waitMessage() error {
 	for {
 		if err = readAll(rc.conn, respHeader.buf[:], rc.ioTimeout); err != nil {
 			if isTimeoutError(err) {
-				log.Printf("wait message timeout\n")
+				log.Infof("wait message timeout")
 				continue
 			}
 			return err
@@ -63,11 +63,11 @@ func (rc *ReplicaClient) waitMessage() error {
 		}
 
 		if code == AliveCode {
-			log.Printf("sub is alive\n")
+			log.Infof("sub is alive")
 			continue
 		}
 		if code != OkCode {
-			log.Printf("not support response code\n")
+			log.Infof("not support response code")
 			return nil
 		}
 
@@ -86,7 +86,7 @@ func (rc *ReplicaClient) waitMessage() error {
 
 		cmdLine := CmdDecoder(cmdBuf)
 
-		log.Printf("replica:seqId=%d, cmd=%d, l:%d , l1:%d\n", cmdLine.MessageSeqId, cmdLine.Command, cmdLine.PayloadLen, len(body))
+		log.Infof("replica:seqId=%d, cmd=%d, l:%d , l1:%d", cmdLine.MessageSeqId, cmdLine.Command, cmdLine.PayloadLen, len(body))
 
 		if err = rc.ack(Ack); err != nil {
 			return err
