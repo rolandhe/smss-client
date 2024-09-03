@@ -23,12 +23,6 @@ func main() {
 
 func dlockSub(who string, eventId int64) {
 	locker := redisLock.NewRedisLock("localhost", 6379, true)
-	//watchChan, err := locker.LockWatcher("dddong-ling")
-	//if err != nil {
-	//	logger.Println(err)
-	//	return
-	//}
-
 	lsub := client.NewDLockSub("order", who, "localhost", 12301, time.Second*5, locker, true)
 
 	count := int64(0)
@@ -73,13 +67,8 @@ func sub(who string, eventId int64) {
 			} else {
 				body = string(msg.GetPayload())
 			}
-			//if count > 25599900 || count%100000 == 0 {
 			logger.Infof("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
-			//}
 			count++
-			//if count == 25600000 {
-			//	count = 0
-			//}
 		}
 		return client.Ack
 	})
@@ -87,7 +76,6 @@ func sub(who string, eventId int64) {
 		logger.Infof("%v\n", err)
 		return
 	}
-	sc.Close()
 }
 
 func accept(messages []*client.SubMessage) client.AckEnum {
