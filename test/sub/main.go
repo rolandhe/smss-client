@@ -42,7 +42,7 @@ func dlockSub(who string, eventId int64) {
 			} else {
 				body = string(msg.GetPayload())
 			}
-			if count%100000 == 0 {
+			if count%50 == 0 {
 				logger.Infof("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
 			}
 			count++
@@ -98,7 +98,7 @@ func accept(messages []*client.SubMessage) client.AckEnum {
 		} else {
 			body = string(msg.GetPayload())
 		}
-		logger.Infof("%d, %d, %d, %d: %s\n", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
+		logger.Infof("%d, %d, %d, %d: %s", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
 	}
 	return client.Ack
 }

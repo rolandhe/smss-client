@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+const (
+	lockedLife     = time.Second * 30
+	tryLockTimeout = time.Second * 10
+	leaseInterval  = time.Second * 25
+)
+
 const luaExtendScript = `
     if redis.call("get", KEYS[1]) == ARGV[1] then
         return redis.call("expire", KEYS[1], ARGV[2])
@@ -29,17 +35,17 @@ type rLock struct {
 	host string
 	port int
 
-	rClient *redis.Client
-	simple  bool
+	rClient       *redis.Client
+	notSupportLua bool
 }
 
-func NewRedisLock(host string, port int, simple bool) dlock.DLock {
+func NewRedisLock(host string, port int, notSupportLua bool) dlock.DLock {
 	rClient := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", host, port),
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	return &rLock{host: host, port: port, rClient: rClient, simple: simple}
+	return &rLock{host: host, port: port, rClient: rClient, notSupportLua: notSupportLua}
 }
 
 func (r *rLock) LockWatcher(key string) (<-chan dlock.WatchState, error) {
@@ -58,12 +64,6 @@ func (r *rLock) LockWatcher(key string) (<-chan dlock.WatchState, error) {
 //	cmd := r.rClient.Eval(context.Background(), luaReleaseScript, []string{key}, value)
 //	return cmd.Val().(int64) == 1
 //}
-
-const (
-	lockedLife     = time.Second * 60
-	tryLockTimeout = time.Second * 20
-	leaseInterval  = time.Second * 50
-)
 
 func (r *rLock) lock(st *state) {
 	sm := 0
@@ -97,7 +97,7 @@ func (r *rLock) lock(st *state) {
 }
 
 func (r *rLock) lease(key, value string) bool {
-	if r.simple {
+	if r.notSupportLua {
 		cmdRet, err := r.rClient.Expire(context.Background(), key, lockedLife).Result()
 		if err != nil {
 			return false

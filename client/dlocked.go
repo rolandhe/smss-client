@@ -139,7 +139,7 @@ func (r *watchRunning) runCore() {
 	r.runClient = client
 	r.Unlock()
 
-	logger.Infof("to subcribe,eventId=%d\n", r.eventId)
+	logger.Infof("to subcribe,eventId=%d", r.eventId)
 	err = client.Sub(r.eventId, r.batchSize, r.ackTimeout, func(messages []*SubMessage) AckEnum {
 		last := messages[len(messages)-1]
 		ret := r.accept(messages)
