@@ -11,7 +11,7 @@ import (
 
 var (
 	who     = flag.String("who", "vvi", "subscriber who")
-	eventId = flag.Int64("event", 0, "event id")
+	eventId = flag.Int64("event", 1294734, "event id")
 )
 
 func main() {

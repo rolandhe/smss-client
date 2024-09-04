@@ -19,7 +19,7 @@ func NewDLockSub(mqName, who, host string, port int, timeout time.Duration, lock
 			return NewSubClient(mqName, who, host, port, timeout)
 		},
 		locker:    locker,
-		key:       fmt.Sprintf("sub_lock@%s", who),
+		key:       fmt.Sprintf("sub_lock@%s@%s", mqName, who),
 		syncWatch: syncWatch,
 	}
 }
