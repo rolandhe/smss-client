@@ -13,30 +13,23 @@ type DLockSub interface {
 	Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error
 }
 
-func NewDLockSub(topicName, who, host string, port int, timeout time.Duration, locker dlock.DLock, syncWatch bool) DLockSub {
+func NewDLockSub(topicName, who, host string, port int, timeout time.Duration, locker dlock.SubLock) DLockSub {
 	return &dLockedSub{
 		clientCreateFunc: func() (*SubClient, error) {
 			return NewSubClient(topicName, who, host, port, timeout)
 		},
-		locker:    locker,
-		key:       fmt.Sprintf("sub_lock@%s@%s", topicName, who),
-		syncWatch: syncWatch,
+		locker: locker,
+		key:    fmt.Sprintf("sub_lock@%s@%s", topicName, who),
 	}
 }
 
 type dLockedSub struct {
 	clientCreateFunc func() (*SubClient, error)
-	locker           dlock.DLock
+	locker           dlock.SubLock
 	key              string
-	syncWatch        bool
 }
 
 func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
-	watcher, err := sub.locker.LockWatcher(sub.key)
-	if err != nil {
-		return err
-	}
-
 	r := &watchRunning{
 		eventId:          eventId,
 		batchSize:        batchSize,
@@ -44,39 +37,26 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 		accept:           accept,
 		clientCreateFunc: sub.clientCreateFunc,
 	}
-
-	if sub.syncWatch {
-		sub.doWatch(watcher, r)
-	} else {
-		go sub.doWatch(watcher, r)
-	}
-
-	return nil
-}
-
-func (sub *dLockedSub) doWatch(watchChan <-chan dlock.WatchState, r *watchRunning) {
-	for {
-		var state dlock.WatchState
-		select {
-		case state = <-watchChan:
-		case <-time.After(time.Second * 75):
-			continue
-		}
+	err := sub.locker.LockWatcher(sub.key, func(state dlock.WatchState) {
 		if state == dlock.Locked {
 			logger.Infof("get lock,and start thread to subscribe")
 			go func() {
 				r.run()
 				close(r.closeChan)
 			}()
-			continue
+			return
 		}
-		if state == dlock.LostLock {
-			logger.Infof("loss lock,release resource")
+		if state == dlock.LostLock || state == dlock.LockerShutdown {
+			logger.Infof("release resource,state=%v", state)
 			r.cleanResource()
-			continue
+			return
 		}
 		logger.Infof("lock state %v", state)
+	})
+	if err != nil {
+		return err
 	}
+	return nil
 }
 
 type watchRunning struct {

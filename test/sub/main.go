@@ -22,8 +22,8 @@ func main() {
 }
 
 func dlockSub(who string, eventId int64) {
-	locker := redisLock.NewRedisLock("localhost", 6379, true)
-	lsub := client.NewDLockSub("order", who, "localhost", 12301, time.Second*5, locker, true)
+	locker := redisLock.NewRedisSubLock("localhost", 6379, true, false)
+	lsub := client.NewDLockSub("order", who, "localhost", 12301, time.Second*5, locker)
 
 	count := int64(0)
 
@@ -45,6 +45,8 @@ func dlockSub(who string, eventId int64) {
 	})
 	logger.Infof("dlockSub err:%v", err)
 
+	time.Sleep(time.Minute)
+	locker.Shutdown()
 }
 
 func sub(who string, eventId int64) {
