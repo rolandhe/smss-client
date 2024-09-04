@@ -98,6 +98,13 @@ func (r *rLock) lock(st *state) {
 
 func (r *rLock) lease(key, value string) bool {
 	if r.notSupportLua {
+		v, err := r.rClient.Get(context.Background(), key).Result()
+		if err != nil {
+			return false
+		}
+		if v != value {
+			return false
+		}
 		cmdRet, err := r.rClient.Expire(context.Background(), key, lockedLife).Result()
 		if err != nil {
 			return false
