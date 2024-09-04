@@ -13,13 +13,13 @@ type DLockSub interface {
 	Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error
 }
 
-func NewDLockSub(mqName, who, host string, port int, timeout time.Duration, locker dlock.DLock, syncWatch bool) DLockSub {
+func NewDLockSub(topicName, who, host string, port int, timeout time.Duration, locker dlock.DLock, syncWatch bool) DLockSub {
 	return &dLockedSub{
 		clientCreateFunc: func() (*SubClient, error) {
-			return NewSubClient(mqName, who, host, port, timeout)
+			return NewSubClient(topicName, who, host, port, timeout)
 		},
 		locker:    locker,
-		key:       fmt.Sprintf("sub_lock@%s@%s", mqName, who),
+		key:       fmt.Sprintf("sub_lock@%s@%s", topicName, who),
 		syncWatch: syncWatch,
 	}
 }

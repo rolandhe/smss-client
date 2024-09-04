@@ -32,14 +32,14 @@ type SubClient struct {
 
 type MessagesAccept func(messages []*SubMessage) AckEnum
 
-func NewSubClient(mqName, who, host string, port int, timeout time.Duration) (*SubClient, error) {
+func NewSubClient(topicName, who, host string, port int, timeout time.Duration) (*SubClient, error) {
 	nw, err := newNetwork(host, port, timeout, true)
 	if err != nil {
 		return nil, err
 	}
 	return &SubClient{
 		network:          nw,
-		mqName:           mqName,
+		mqName:           topicName,
 		who:              who,
 		maxNoDataTimeout: 35 * 1000,
 	}, nil
