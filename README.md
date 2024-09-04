@@ -207,3 +207,7 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 		return
 	}
 ```
+
+# log
+
+logger.Logger接口定义了输出log的能力，可以通过实现该接口并修改logger.LoggerInstance全部变量来自定义日志的输出，默认实现使用log.Printf输出日志.
