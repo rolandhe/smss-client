@@ -131,7 +131,7 @@ smss客户端支持两种订阅方式：
 
 ## 分布式锁订阅
 ### 分布式锁
-DLock接口定义了分布式锁的描述，你可以自行实现，比如基于zookeeper、etcd或者redis实现自己的分布式锁。
+SubLock接口定义了分布式锁的描述，你可以自行实现，比如基于zookeeper、etcd或者redis实现自己的分布式锁。
 
 #### redis分布式锁
 
