@@ -9,10 +9,23 @@ import (
 	"time"
 )
 
+// DLockSub 带分布式锁的topic订阅者
 type DLockSub interface {
+	// Sub 订阅消息
+	// eventId 已经消费完的消息的id，下一个消息将被推送
+	// batchSize 支持批量消息订阅，batchSize支持批的大学，不要超过255
+	// ackTimeout 告诉smss server 消息的最大处理时间，超过这个时间smss server如果还没有收到ack，smss server就认为socket已经断掉
+	// accept 处理收到消息的回调函数
 	Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error
 }
 
+// NewDLockSub 创建支持分布式锁的订阅客户端, 分布式锁保证多个实例只有一个实例能够订阅消息, 并且当获取锁的实例崩溃后可以协调另一个实例继续消费
+// topicName topic name
+// who 当前订阅者是谁
+// host smss server host
+// port smss server port
+// timeout 网络超时，包括 connect timeout and soTimeout
+// locker 分布式锁
 func NewDLockSub(topicName, who, host string, port int, timeout time.Duration, locker dlock.SubLock) DLockSub {
 	return &dLockedSub{
 		clientCreateFunc: func() (*SubClient, error) {

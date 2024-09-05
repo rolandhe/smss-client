@@ -150,7 +150,7 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 
 ```go
     // 不支持lua
-    locker := redisLock.NewRedisSubLock("localhost", 6379, true, false)
+    locker := redisLock.NewRedisSubLock("localhost", 6379, true)
     lsub := client.NewDLockSub("order", who, "localhost", 12301, time.Second*5, locker)
 
 	count := int64(0)
@@ -172,7 +172,8 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 		return client.Ack
 	})
 	logger.Infof("dlockSub err:%v", err)
-
+    time.Sleep(time.Second * 30)
+    locker.Shutdown()
 ```
 
 ## 简单订阅
