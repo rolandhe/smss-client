@@ -42,10 +42,6 @@ type CmdRedisClient interface {
 }
 
 type redisLocker struct {
-	//host string
-	//port int
-
-	//rClient         *redis.Client
 	rClient         CmdRedisClient
 	notSupportLua   bool
 	runInMainThread bool
