@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/rolandhe/smss/smss-client/client"
+	"github.com/rolandhe/smss-client/client"
+	"github.com/rolandhe/smss-client/logger"
 	"log"
 	"time"
 )
