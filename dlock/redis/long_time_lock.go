@@ -7,6 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/rolandhe/smss-client/dlock"
 	"github.com/rolandhe/smss-client/logger"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,41 +34,64 @@ const luaReleaseScript = `
 	end
 `
 
-type redisLocker struct {
-	host string
-	port int
+type CmdRedisClient interface {
+	redis.StringCmdable
+	redis.GenericCmdable
+	redis.ScriptingFunctionsCmdable
+	io.Closer
+}
 
-	rClient         *redis.Client
+type redisLocker struct {
+	//host string
+	//port int
+
+	//rClient         *redis.Client
+	rClient         CmdRedisClient
 	notSupportLua   bool
 	runInMainThread bool
 
 	st *state
 }
 
-// NewRedisSubLock 创建生成环境中的锁, 所有锁的操作在一个goroutine中执行
+// NewSimpleRedisSubLock 创建生成环境中的锁, 所有锁的操作在一个goroutine中执行
 //
 //	host redis host
 //	port redis port
 //	notSupportLua 是否支持lua脚本,一些类redis的产品不支持lua，比如 pika
-func NewRedisSubLock(host string, port int, notSupportLua bool) dlock.SubLock {
-	return newRedisSubLock(host, port, notSupportLua, false)
+func NewSimpleRedisSubLock(host string, port int, notSupportLua bool) dlock.SubLock {
+	return NewRedisSubLock(func() CmdRedisClient {
+		return defaultFactory(host, port)
+	}, notSupportLua)
 }
 
-// NewRedisSubLockInMainThread 与NewRedisSubLock类似，支持有关所的操作在当前的主goroutine中执行，一般用于测试
-func NewRedisSubLockInMainThread(host string, port int, notSupportLua bool) dlock.SubLock {
-	return newRedisSubLock(host, port, notSupportLua, true)
+// NewSimpleRedisSubLockInMainThread 与NewSimpleRedisSubLock类似，支持有关所的操作在当前的主goroutine中执行，一般用于测试
+func NewSimpleRedisSubLockInMainThread(host string, port int, notSupportLua bool) dlock.SubLock {
+	return NewRedisSubLockInMainThread(func() CmdRedisClient {
+		return defaultFactory(host, port)
+	}, notSupportLua)
 }
 
-func newRedisSubLock(host string, port int, notSupportLua, runInMainThread bool) dlock.SubLock {
-	rClient := redis.NewClient(&redis.Options{
+// NewRedisSubLock 创建redis 锁, 需要指定创建redis客户端的工厂方法，与NewSimpleRedisSubLock类似，所有锁的操作在一个goroutine中执行
+func NewRedisSubLock(factoryFunc func() CmdRedisClient, notSupportLua bool) dlock.SubLock {
+	return newRedisSubLock(factoryFunc, notSupportLua, false)
+}
+
+// NewRedisSubLockInMainThread 与NewRedisSubLock类似，只是锁操作当当前主goroutine内运行
+func NewRedisSubLockInMainThread(factoryFunc func() CmdRedisClient, notSupportLua bool) dlock.SubLock {
+	return newRedisSubLock(factoryFunc, notSupportLua, true)
+}
+
+func defaultFactory(host string, port int) CmdRedisClient {
+	return redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", host, port),
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
+}
+
+func newRedisSubLock(factoryFunc func() CmdRedisClient, notSupportLua, runInMainThread bool) dlock.SubLock {
 	return &redisLocker{
-		host:            host,
-		port:            port,
-		rClient:         rClient,
+		rClient:         factoryFunc(),
 		notSupportLua:   notSupportLua,
 		runInMainThread: runInMainThread,
 	}
