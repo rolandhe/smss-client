@@ -71,6 +71,20 @@ func (m *Message) GetHeaders() []*Header {
 	return m.headers
 }
 
+func (m *Message) GetHeaderValue(key string) string {
+	if len(m.headers) == 0 {
+		return ""
+	}
+
+	for _, header := range m.headers {
+		if header.Key == key {
+			return header.Value
+		}
+	}
+
+	return ""
+}
+
 func (m *Message) GetPayload() []byte {
 	return m.payload
 }
