@@ -45,13 +45,13 @@ func NewSubClient(topicName, who, host string, port int, timeout time.Duration) 
 	}, nil
 }
 
-func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
+func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept, afterAck func(lastEventId int64, ack AckEnum, err error)) error {
 	var err error
 	buf := sc.packageSubCmd(eventId, batchSize, ackTimeout)
 	if err = writeAll(sc.conn, buf, sc.ioTimeout); err != nil {
 		return err
 	}
-	err = sc.waitMessage(accept)
+	err = sc.waitMessage(accept, afterAck)
 
 	logger.Infof("wait message:%v", err)
 	return err
@@ -62,7 +62,7 @@ func (sc *SubClient) Termite() {
 	sc.Close()
 }
 
-func (sc *SubClient) waitMessage(accept MessagesAccept) error {
+func (sc *SubClient) waitMessage(accept MessagesAccept, afterAck func(lastEventId int64, ack AckEnum, err error)) error {
 	var respHeader SubRespHeader
 	var err error
 	lastTime := time.Now().UnixMilli()
@@ -113,15 +113,18 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		if messages, err = parseMessages(content, msgCount); err != nil {
 			return err
 		}
-
+		lastEventId := messages[len(messages)-1].EventId
 		ack := accept(messages)
 		if TermiteWithoutAck == ack {
+			afterAck(lastEventId, ack, nil)
 			return nil
 		}
 		if err = sc.ack(ack); err != nil {
+			afterAck(lastEventId, ack, err)
 			return err
 		}
 		if ack == AckWithEnd {
+			afterAck(lastEventId, ack, nil)
 			return nil
 		}
 	}

@@ -16,7 +16,8 @@ type DLockSub interface {
 	// batchSize 支持批量消息订阅，batchSize支持批的大学，不要超过255
 	// ackTimeout 告诉smss server 消息的最大处理时间，超过这个时间smss server如果还没有收到ack，smss server就认为socket已经断掉
 	// accept 处理收到消息的回调函数
-	Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error
+	// ack 执行完成后回调
+	Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept, afterAck func(lastEventId int64, ack AckEnum, err error)) error
 }
 
 // NewDLockSub 创建支持分布式锁的订阅客户端, 分布式锁保证多个实例只有一个实例能够订阅消息, 并且当获取锁的实例崩溃后可以协调另一个实例继续消费
@@ -42,7 +43,7 @@ type dLockedSub struct {
 	key              string
 }
 
-func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept) error {
+func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Duration, accept MessagesAccept, afterAck func(lastEventId int64, ack AckEnum, err error)) error {
 	r := &watchRunning{
 		eventId:          eventId,
 		batchSize:        batchSize,
@@ -50,11 +51,17 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 		accept:           accept,
 		clientCreateFunc: sub.clientCreateFunc,
 	}
-	err := sub.locker.LockWatcher(sub.key, func(state dlock.WatchState) {
+	if afterAck == nil {
+		afterAck = func(lastEventId int64, ack AckEnum, err error) {}
+	}
+	r.afterAck = afterAck
+	err := sub.locker.LockWatcher(sub.key, func(state dlock.WatchState, termLockChan dlock.TermiteLockChan) {
 		if state == dlock.Locked {
 			logger.Infof("get lock,and start thread to subscribe")
 			go func() {
-				r.run()
+				if r.run() {
+					close(termLockChan)
+				}
 				close(r.closeChan)
 			}()
 			return
@@ -77,6 +84,7 @@ type watchRunning struct {
 	batchSize        uint8
 	ackTimeout       time.Duration
 	accept           MessagesAccept
+	afterAck         func(lastEventId int64, ack AckEnum, err error)
 	clientCreateFunc func() (*SubClient, error)
 
 	sync.Mutex
@@ -86,13 +94,16 @@ type watchRunning struct {
 	closeChan chan struct{}
 }
 
-func (r *watchRunning) run() {
+func (r *watchRunning) run() bool {
 	r.reset()
 	for {
 		if r.closedState.Load() {
-			break
+			return false
 		}
-		r.runCore()
+		if r.runCore() {
+			logger.Infof("watchRunning run termite by sub")
+			return true
+		}
 	}
 }
 
@@ -101,7 +112,7 @@ func (r *watchRunning) reset() {
 	r.closedState.Store(false)
 }
 
-func (r *watchRunning) runCore() {
+func (r *watchRunning) runCore() bool {
 	var err error
 	var client *SubClient
 	for {
@@ -109,7 +120,7 @@ func (r *watchRunning) runCore() {
 		if err != nil {
 			if r.closedState.Load() {
 				logger.Infof("subcribe closed,no client,return")
-				return
+				return false
 			}
 			logger.Infof("connect smss server err,sleep 5s:%v", err)
 			time.Sleep(time.Second * 5)
@@ -118,7 +129,7 @@ func (r *watchRunning) runCore() {
 		if r.closedState.Load() {
 			client.Close()
 			logger.Infof("subcribe closed,release client,return")
-			return
+			return false
 		}
 		break
 	}
@@ -127,21 +138,33 @@ func (r *watchRunning) runCore() {
 	if r.closedState.Load() {
 		client.Close()
 		logger.Infof("subcribe closed,release client,return")
-		return
+		return false
 	}
 	r.runClient = client
 	r.Unlock()
 
+	var byTermite atomic.Bool
 	logger.Infof("to subcribe,eventId=%d", r.eventId)
 	err = client.Sub(r.eventId, r.batchSize, r.ackTimeout, func(messages []*SubMessage) AckEnum {
 		last := messages[len(messages)-1]
 		ret := r.accept(messages)
 		r.eventId = last.EventId
+
 		return ret
+	}, func(lastEventId int64, ack AckEnum, err error) {
+		defer r.afterAck(lastEventId, ack, err)
+		if err != nil {
+			return
+		}
+		if ack == AckWithEnd || ack == TermiteWithoutAck {
+			logger.Infof("runCore termite by ack:%v,eventId=%d", ack, lastEventId)
+			byTermite.Store(true)
+		}
 	})
 
 	logger.Infof("sub error:%v", err)
 
+	return byTermite.Load()
 }
 
 func (r *watchRunning) cleanResource() {

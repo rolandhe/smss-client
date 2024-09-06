@@ -42,6 +42,8 @@ func dlockSub(who string, eventId int64) {
 			count++
 		}
 		return client.Ack
+	}, func(eventId int64, ack client.AckEnum, err error) {
+		// to record eventId
 	})
 	logger.Infof("dlockSub err:%v", err)
 
@@ -73,6 +75,8 @@ func sub(who string, eventId int64) {
 			count++
 		}
 		return client.Ack
+	}, func(eventId int64, ack client.AckEnum, err error) {
+		// to record eventId
 	})
 	if err != nil {
 		logger.Infof("%v\n", err)

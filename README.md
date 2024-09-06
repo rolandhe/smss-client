@@ -149,29 +149,30 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 ### 示例
 
 ```go
-    // 不支持lua
     locker := redisLock.NewRedisSubLock("localhost", 6379, true)
     lsub := client.NewDLockSub("order", who, "localhost", 12301, time.Second*5, locker)
-
-	count := int64(0)
-
-	err := lsub.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
-		for _, msg := range messages {
-
-			var body string
-			if len(msg.GetPayload()) > 500 {
-				body = string(msg.GetPayload()[len(msg.GetPayload())-500:])
-			} else {
-				body = string(msg.GetPayload())
-			}
-			if count%50 == 0 {
-				logger.Infof("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
-			}
-			count++
-		}
-		return client.Ack
-	})
-	logger.Infof("dlockSub err:%v", err)
+    
+    count := int64(0)
+    
+    err := lsub.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
+          for _, msg := range messages {
+              var body string
+              if len(msg.GetPayload()) > 500 {
+              body = string(msg.GetPayload()[len(msg.GetPayload())-500:])
+              } else {
+              body = string(msg.GetPayload())
+              }
+              if count%50 == 0 {
+                  logger.Infof("ts=%d, eventId=%d, fileId=%d, pos=%d, body is: %s", msg.Ts, msg.EventId, msg.FileId, msg.Pos, body)
+              }
+              count++
+          }
+          return client.Ack
+    }, func(eventId int64, ack client.AckEnum, err error) {
+        // to record eventId
+    })
+    logger.Infof("dlockSub err:%v", err)
+    
     time.Sleep(time.Second * 30)
     locker.Shutdown()
 ```
@@ -191,7 +192,6 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 	// 311041
 	err = sc.Sub(eventId, 5, time.Second*10, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
-
 			var body string
 			if len(msg.GetPayload()) > 500 {
 				body = string(msg.GetPayload()[len(msg.GetPayload())-500:])
@@ -202,7 +202,9 @@ smss-client实现了基于redis的分布式锁，dlock/redis下是对应的实�
 			count++
 		}
 		return client.Ack
-	})
+	},func(eventId int64, ack client.AckEnum, err error) {
+            // to record eventId
+    })
 	if err != nil {
 		logger.Infof("%v\n", err)
 		return

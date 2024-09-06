@@ -73,7 +73,7 @@ func newRedisSubLock(host string, port int, notSupportLua, runInMainThread bool)
 	}
 }
 
-func (r *redisLocker) LockWatcher(key string, watcherFunc func(event dlock.WatchState)) error {
+func (r *redisLocker) LockWatcher(key string, watcherFunc func(event dlock.WatchState, termiteChan dlock.TermiteLockChan)) error {
 	r.st = &state{
 		key:                  key,
 		value:                uuid.New().String(),
@@ -90,10 +90,14 @@ func (r *redisLocker) LockWatcher(key string, watcherFunc func(event dlock.Watch
 	wg.Add(1)
 	go func() {
 		wg.Done()
-		r.lock(watcherFunc)
-		watcherFunc(dlock.LockerShutdown)
+		bySubTermite := r.lock(watcherFunc)
+		if !bySubTermite {
+			watcherFunc(dlock.LockerShutdown, nil)
+
+			logger.Infof("lock LockerShutdown ok,and release sub ok")
+		}
 		close(r.st.waitShutdownComplete)
-		logger.Infof("lock goroutine exit")
+		logger.Infof("lock goroutine exit, bySubTermite? %v", bySubTermite)
 	}()
 	wg.Wait()
 	return nil
@@ -128,9 +132,11 @@ func (r *redisLocker) release(key string, value string, canRm bool) bool {
 	return cmd.Val().(int64) == 1
 }
 
-func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState)) {
+func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState, termiteChan dlock.TermiteLockChan)) bool {
 	st := r.st
 	sm := 0
+	termiteLockChan := make(chan struct{})
+	bySubTermite := false
 	for !st.shutdownState.Load() {
 		if sm == 0 {
 			st.record(r.notSupportLua)
@@ -138,27 +144,31 @@ func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState)) {
 			timeout := tryLockTimeout
 			if ok {
 				timeout = leaseInterval
-				watcherFunc(dlock.Locked)
+				watcherFunc(dlock.Locked, termiteLockChan)
 				sm = 1
 			} else {
 				st.resetExpire(r.notSupportLua)
-				watcherFunc(dlock.LockTimeout)
+				watcherFunc(dlock.LockTimeout, termiteLockChan)
 			}
-			sleep(timeout, st.shutdownChan)
+			if bySubTermite = sleep(timeout, st.shutdownChan, termiteLockChan); bySubTermite {
+				break
+			}
 			continue
 		}
 		if sm == 1 {
 			timeout := leaseInterval
 			st.resetExpire(r.notSupportLua)
 			if !r.lease(st.key, st.value) {
-				watcherFunc(dlock.LostLock)
+				watcherFunc(dlock.LostLock, termiteLockChan)
 				timeout = tryLockTimeout
 				sm = 0
 			} else {
 				st.record(r.notSupportLua)
-				watcherFunc(dlock.Leased)
+				watcherFunc(dlock.Leased, termiteLockChan)
 			}
-			sleep(timeout, st.shutdownChan)
+			if bySubTermite = sleep(timeout, st.shutdownChan, termiteLockChan); bySubTermite {
+				break
+			}
 			continue
 		}
 	}
@@ -166,13 +176,17 @@ func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState)) {
 	r.rClient.Close()
 	r.rClient = nil
 	logger.Infof("release redis client and locker")
+	return bySubTermite
 }
 
-func sleep(d time.Duration, shutdownChan chan struct{}) {
+func sleep(d time.Duration, shutdownChan chan struct{}, lockTermiteChan <-chan struct{}) bool {
 	select {
+	case <-lockTermiteChan:
+		return true
 	case <-shutdownChan:
 	case <-time.After(d):
 	}
+	return false
 }
 
 func (r *redisLocker) lease(key, value string) bool {
