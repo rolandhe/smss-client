@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/client"
-	"github.com/rolandhe/smss/smss-client/logger"
-	"github.com/rolandhe/smss/smss-client/pool"
+	"github.com/rolandhe/smss-client/client"
+	"github.com/rolandhe/smss-client/logger"
+	"github.com/rolandhe/smss-client/pool"
 	"strconv"
 	"sync"
 	"time"

@@ -2,8 +2,8 @@ package client
 
 import (
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/dlock"
-	"github.com/rolandhe/smss/smss-client/logger"
+	"github.com/rolandhe/smss-client/dlock"
+	"github.com/rolandhe/smss-client/logger"
 	"sync"
 	"sync/atomic"
 	"time"

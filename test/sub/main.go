@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/client"
-	redisLock "github.com/rolandhe/smss/smss-client/dlock/redis"
-	"github.com/rolandhe/smss/smss-client/logger"
+	"github.com/rolandhe/smss-client/client"
+	redisLock "github.com/rolandhe/smss-client/dlock/redis"
+	"github.com/rolandhe/smss-client/logger"
 	"time"
 )
 

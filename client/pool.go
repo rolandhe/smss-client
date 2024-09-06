@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/rolandhe/smss/smss-client/pool"
+	"github.com/rolandhe/smss-client/pool"
 	"time"
 )
 

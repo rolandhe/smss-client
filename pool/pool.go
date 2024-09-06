@@ -3,7 +3,7 @@ package pool
 import (
 	"errors"
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/logger"
+	"github.com/rolandhe/smss-client/logger"
 	"sync"
 	"sync/atomic"
 	"time"

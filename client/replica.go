@@ -2,7 +2,7 @@ package client
 
 import (
 	"encoding/binary"
-	"github.com/rolandhe/smss/smss-client/logger"
+	"github.com/rolandhe/smss-client/logger"
 	"strconv"
 	"strings"
 	"time"

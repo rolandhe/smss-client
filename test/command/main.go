@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/rolandhe/smss/smss-client/client"
+	"github.com/rolandhe/smss-client/client"
 	"os"
 	"strconv"
 	"strings"

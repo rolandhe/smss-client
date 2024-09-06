@@ -1,6 +1,6 @@
-module github.com/rolandhe/smss/smss-client
+module github.com/rolandhe/smss-client
 
-go 1.21.6
+go 1.19
 
 require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

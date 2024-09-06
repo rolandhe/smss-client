@@ -3,7 +3,7 @@ package client
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/rolandhe/smss/smss-client/logger"
+	"github.com/rolandhe/smss-client/logger"
 	"sync/atomic"
 	"time"
 )
@@ -17,9 +17,9 @@ func (a AckEnum) Value() byte {
 }
 
 const (
-	Ack                     AckEnum = 0
-	AckWithEnd              AckEnum = 1
-	ClientTermiteWithoutAck AckEnum = 2
+	Ack               AckEnum = 0
+	AckWithEnd        AckEnum = 1
+	TermiteWithoutAck AckEnum = 2
 )
 
 type SubClient struct {
@@ -115,7 +115,7 @@ func (sc *SubClient) waitMessage(accept MessagesAccept) error {
 		}
 
 		ack := accept(messages)
-		if ClientTermiteWithoutAck == ack {
+		if TermiteWithoutAck == ack {
 			return nil
 		}
 		if err = sc.ack(ack); err != nil {
