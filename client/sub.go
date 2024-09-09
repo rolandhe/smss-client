@@ -51,6 +51,10 @@ func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duratio
 	if err = writeAll(sc.conn, buf, sc.ioTimeout); err != nil {
 		return err
 	}
+
+	if afterAck == nil {
+		afterAck = func(lastEventId int64, ack AckEnum, err error) {}
+	}
 	err = sc.waitMessage(accept, afterAck)
 
 	logger.Infof("wait message:%v", err)
