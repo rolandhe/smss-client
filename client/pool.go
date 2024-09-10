@@ -36,14 +36,14 @@ func (ppool *PubClientPool) ShutDown() {
 	ppool.internalPool.ShutDown()
 }
 
-func NewPubClientPool(config *pool.Config, host string, port int, connectTimeout time.Duration) PubClientPool {
+func NewPubClientPool(config *pool.Config, host string, port int, connectTimeout time.Duration) *PubClientPool {
 	factory := &pubClientFactory{
 		host:           host,
 		port:           port,
 		connectTimeout: connectTimeout,
 	}
 	internal := pool.NewPool[PubClient](config, factory)
-	return PubClientPool{
+	return &PubClientPool{
 		internalPool: internal,
 	}
 }
