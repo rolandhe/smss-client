@@ -62,7 +62,7 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 			go func() {
 				logger.Infof("sub thread to subscribe,parentGid=%d", pgid)
 				r.run()
-				close(r.closeChan)
+				close(r.closedChan)
 			}()
 			return
 		}
@@ -88,57 +88,59 @@ type watchRunning struct {
 	clientCreateFunc func() (*SubClient, error)
 
 	sync.Mutex
-	closedState atomic.Bool
-	runClient   *SubClient
+	closedState  atomic.Bool
+	closeStateCh chan struct{}
+	runClient    *SubClient
 
-	closeChan chan struct{}
+	closedChan chan struct{}
 }
 
 func (r *watchRunning) run() {
 	r.reset()
+	if r.closedState.Load() {
+		return
+	}
 	for {
-		if r.closedState.Load() {
-			break
-		}
 		r.runCore()
+		logger.Infof("runCore exit, try to wait...")
+		select {
+		case <-r.closeStateCh:
+			logger.Infof("lock shutdown, exit watchRunning.run")
+			return
+		case <-time.After(time.Second * 5):
+			logger.Infof("wait 5s after r.runCore, try to run core again")
+		}
 	}
 }
 
 func (r *watchRunning) reset() {
-	r.closeChan = make(chan struct{})
+	r.closedChan = make(chan struct{})
 	r.closedState.Store(false)
+	r.closeStateCh = make(chan struct{})
+	r.setClient(nil)
+}
+
+func (r *watchRunning) setClient(client *SubClient) {
+	r.Lock()
+	defer r.Unlock()
+	r.runClient = client
 }
 
 func (r *watchRunning) runCore() {
 	var err error
 	var client *SubClient
-	for {
-		client, err = r.clientCreateFunc()
-		if err != nil {
-			if r.closedState.Load() {
-				logger.Infof("subcribe closed,no client,return")
-				return
-			}
-			logger.Infof("connect smss server err,sleep 3s:%v", err)
-			time.Sleep(time.Second * 3)
-			continue
-		}
-		if r.closedState.Load() {
-			client.Close()
-			logger.Infof("subcribe closed,release client,return")
-			return
-		}
-		break
-	}
-
-	r.Lock()
-	if r.closedState.Load() {
-		client.Close()
-		logger.Infof("subcribe closed,release client,return")
+	client, err = r.clientCreateFunc()
+	if err != nil {
+		logger.Infof("runCore to create client failed, err:%v", err)
 		return
 	}
-	r.runClient = client
-	r.Unlock()
+
+	defer client.Close()
+	if r.closedState.Load() {
+		logger.Infof("locker shutdown,runCore to release client,and return")
+		return
+	}
+	r.setClient(client)
 
 	logger.Infof("to subcribe,eventId=%d", r.eventId)
 	err = client.Sub(r.eventId, r.batchSize, r.ackTimeout, func(messages []*SubMessage) AckEnum {
@@ -150,10 +152,12 @@ func (r *watchRunning) runCore() {
 	}, r.afterAck)
 
 	logger.Infof("sub error:%v", err)
+	r.setClient(nil)
 }
 
 func (r *watchRunning) cleanResource() {
 	r.closedState.Store(true)
+	close(r.closeStateCh)
 	var client *SubClient
 	r.Lock()
 	client = r.runClient
@@ -163,6 +167,6 @@ func (r *watchRunning) cleanResource() {
 	if client != nil {
 		client.Close()
 		logger.Infof("subcribe end,client close")
-		<-r.closeChan
+		<-r.closedChan
 	}
 }
