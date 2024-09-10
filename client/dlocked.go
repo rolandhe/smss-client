@@ -57,8 +57,10 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 	r.afterAck = afterAck
 	err := sub.locker.LockWatcher(sub.key, func(state dlock.WatchState) {
 		if state == dlock.Locked {
+			pgid := logger.GetGoroutineID()
 			logger.Infof("get lock,and start thread to subscribe")
 			go func() {
+				logger.Infof("sub thread to subscribe,parentGid=%d", pgid)
 				r.run()
 				close(r.closeChan)
 			}()
@@ -117,8 +119,8 @@ func (r *watchRunning) runCore() {
 				logger.Infof("subcribe closed,no client,return")
 				return
 			}
-			logger.Infof("connect smss server err,sleep 5s:%v", err)
-			time.Sleep(time.Second * 5)
+			logger.Infof("connect smss server err,sleep 3s:%v", err)
+			time.Sleep(time.Second * 3)
 			continue
 		}
 		if r.closedState.Load() {

@@ -108,8 +108,11 @@ func (r *redisLocker) LockWatcher(key string, watcherFunc func(event dlock.Watch
 
 	var wg sync.WaitGroup
 	wg.Add(1)
+	pgid := logger.GetGoroutineID()
+	logger.Infof("start goroutine to locker")
 	go func() {
 		wg.Done()
+		logger.Infof("locker goroutine started,my parentGid=%d", pgid)
 		r.lock(watcherFunc)
 		watcherFunc(dlock.LockerShutdown)
 		close(r.st.waitShutdownComplete)
