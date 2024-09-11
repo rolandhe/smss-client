@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/rolandhe/smss-client/logger"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,8 @@ type SubClient struct {
 	who              string
 	maxNoDataTimeout int64
 	termiteState     atomic.Bool
+
+	key string
 }
 
 type MessagesAccept func(messages []*SubMessage) AckEnum
@@ -42,6 +45,7 @@ func NewSubClient(topicName, who, host string, port int, timeout time.Duration) 
 		mqName:           topicName,
 		who:              who,
 		maxNoDataTimeout: 35 * 1000,
+		key:              fmt.Sprintf("sid=%s.%s", topicName, who),
 	}, nil
 }
 
@@ -57,7 +61,7 @@ func (sc *SubClient) Sub(eventId int64, batchSize uint8, ackTimeout time.Duratio
 	}
 	err = sc.waitMessage(accept, afterAck)
 
-	logger.Infof("wait message:%v", err)
+	logger.Infof("%s,wait message:%v", sc.key, err)
 	return err
 }
 
@@ -73,15 +77,15 @@ func (sc *SubClient) waitMessage(accept MessagesAccept, afterAck func(lastEventI
 	for {
 		if err = readAll(sc.conn, respHeader.buf[:], sc.ioTimeout); err != nil {
 			if sc.termiteState.Load() {
-				logger.Infof("readAll met err, but termite:%v", err)
+				logger.Infof("%s,readAll met err, but termite:%v", sc.key, err)
 				return TermiteError
 			}
 			if isTimeoutError(err) {
 				if time.Now().UnixMilli()-lastTime > sc.maxNoDataTimeout {
-					logger.Infof("wait message timeout too long,maybe server dead")
+					logger.Infof("%s,wait message timeout too long,maybe server dead", sc.key)
 					return err
 				}
-				logger.Infof("wait message timeout,continue...")
+				logger.Infof("%s,wait message timeout,continue...", sc.key)
 				continue
 			}
 			return err
@@ -93,18 +97,18 @@ func (sc *SubClient) waitMessage(accept MessagesAccept, afterAck func(lastEventI
 		}
 
 		if code == SubEndCode {
-			logger.Infof("peer notify to end,maybe mq deleted,end sub")
+			logger.Infof("%s,peer notify to end,maybe mq deleted,end sub", sc.key)
 			return nil
 		}
 
 		lastTime = time.Now().UnixMilli()
 		if code == AliveCode {
-			logger.Infof("sub is alive")
+			logger.Infof("%s,sub is alive", sc.key)
 			continue
 		}
 
 		if code != OkCode {
-			logger.Infof("not support response code")
+			logger.Infof("%s,not support response code", sc.key)
 			return nil
 		}
 
