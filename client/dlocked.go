@@ -59,10 +59,11 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 		if state == dlock.Locked {
 			pgid := logger.GetGoroutineID()
 			logger.Infof("get lock,and start thread to subscribe")
+			r.initControl()
 			go func() {
 				logger.Infof("sub thread to subscribe,parentGid=%d", pgid)
 				r.run()
-				close(r.closedChan)
+				close(r.control.closedChan)
 			}()
 			return
 		}
@@ -87,24 +88,25 @@ type watchRunning struct {
 	afterAck         func(lastEventId int64, ack AckEnum, err error)
 	clientCreateFunc func() (*SubClient, error)
 
-	sync.Mutex
-	closedState  atomic.Bool
-	closeStateCh chan struct{}
-	runClient    *SubClient
+	control struct {
+		closedState  atomic.Bool
+		closeStateCh chan struct{}
+		sync.Mutex
+		runClient *SubClient
 
-	closedChan chan struct{}
+		closedChan chan struct{}
+	}
 }
 
 func (r *watchRunning) run() {
-	r.reset()
-	if r.closedState.Load() {
+	if r.control.closedState.Load() {
 		return
 	}
 	for {
 		r.runCore()
 		logger.Infof("runCore exit, try to wait...")
 		select {
-		case <-r.closeStateCh:
+		case <-r.control.closeStateCh:
 			logger.Infof("lock shutdown, exit watchRunning.run")
 			return
 		case <-time.After(time.Second * 5):
@@ -113,17 +115,27 @@ func (r *watchRunning) run() {
 	}
 }
 
-func (r *watchRunning) reset() {
-	r.closedChan = make(chan struct{})
-	r.closedState.Store(false)
-	r.closeStateCh = make(chan struct{})
+func (r *watchRunning) initControl() {
+	r.control.closedChan = make(chan struct{})
+	r.control.closedState.Store(false)
+	r.control.closeStateCh = make(chan struct{})
 	r.setClient(nil)
 }
 
-func (r *watchRunning) setClient(client *SubClient) {
-	r.Lock()
-	defer r.Unlock()
-	r.runClient = client
+func (r *watchRunning) setClient(client *SubClient) bool {
+	r.control.Lock()
+	defer r.control.Unlock()
+
+	if client == nil {
+		r.control.runClient = nil
+		return true
+	}
+	if r.control.closedState.Load() {
+		r.control.runClient = nil
+		return false
+	}
+	r.control.runClient = client
+	return true
 }
 
 func (r *watchRunning) runCore() {
@@ -136,18 +148,16 @@ func (r *watchRunning) runCore() {
 	}
 
 	defer client.Close()
-	if r.closedState.Load() {
+	if !r.setClient(client) {
 		logger.Infof("locker shutdown,runCore to release client,and return")
 		return
 	}
-	r.setClient(client)
 
 	logger.Infof("to subcribe,eventId=%d", r.eventId)
 	err = client.Sub(r.eventId, r.batchSize, r.ackTimeout, func(messages []*SubMessage) AckEnum {
 		last := messages[len(messages)-1]
 		ret := r.accept(messages)
 		r.eventId = last.EventId
-
 		return ret
 	}, r.afterAck)
 
@@ -156,17 +166,18 @@ func (r *watchRunning) runCore() {
 }
 
 func (r *watchRunning) cleanResource() {
-	r.closedState.Store(true)
-	close(r.closeStateCh)
+	r.control.closedState.Store(true)
+	close(r.control.closeStateCh)
 	var client *SubClient
-	r.Lock()
-	client = r.runClient
-	r.runClient = nil
-	r.Unlock()
+
+	r.control.Lock()
+	client = r.control.runClient
+	r.control.runClient = nil
+	r.control.Unlock()
 
 	if client != nil {
 		client.Close()
 		logger.Infof("subcribe end,client close")
-		<-r.closedChan
+		<-r.control.closedChan
 	}
 }

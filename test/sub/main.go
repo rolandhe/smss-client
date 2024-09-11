@@ -11,7 +11,7 @@ import (
 
 var (
 	who     = flag.String("who", "vvi", "subscriber who")
-	eventId = flag.Int64("event", 1294734, "event id")
+	eventId = flag.Int64("event", 0, "event id")
 )
 
 func main() {
@@ -47,7 +47,7 @@ func dlockSub(who string, eventId int64) {
 	})
 	logger.Infof("dlockSub err:%v", err)
 
-	time.Sleep(time.Second * 30)
+	time.Sleep(time.Second * 60)
 	locker.Shutdown()
 }
 
