@@ -55,6 +55,7 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 		afterAck = func(lastEventId int64, ack AckEnum, err error) {}
 	}
 	r.afterAck = afterAck
+	gotLock := false
 	err := sub.locker.LockWatcher(sub.key, func(state dlock.WatchState) {
 		if state == dlock.Locked {
 			pgid := logger.GetGoroutineID()
@@ -65,11 +66,15 @@ func (sub *dLockedSub) Sub(eventId int64, batchSize uint8, ackTimeout time.Durat
 				r.run()
 				close(r.control.closedChan)
 			}()
+			gotLock = true
 			return
 		}
 		if state == dlock.LostLock || state == dlock.LockerShutdown {
 			logger.Infof("release resource,state=%v", state)
-			r.cleanResource()
+			if gotLock {
+				r.cleanResource()
+				gotLock = false
+			}
 			return
 		}
 		logger.Infof("lock state %v", state)
@@ -178,6 +183,9 @@ func (r *watchRunning) cleanResource() {
 	if client != nil {
 		client.Close()
 		logger.Infof("subcribe end,client close")
-		<-r.control.closedChan
 	}
+	<-r.control.closedChan
+
+	r.control.closeStateCh = nil
+	r.control.closedChan = nil
 }
