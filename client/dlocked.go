@@ -110,12 +110,22 @@ func (r *watchRunning) run() {
 	for {
 		r.runCore()
 		logger.Infof("runCore exit, try to wait...")
-		select {
-		case <-r.control.closeStateCh:
-			logger.Infof("lock shutdown, exit watchRunning.run")
+
+		waitCloseFunc := func() bool {
+			timer := time.NewTimer(time.Second * 5)
+			defer timer.Stop()
+			select {
+			case <-r.control.closeStateCh:
+				logger.Infof("lock shutdown, exit watchRunning.run")
+				return true
+			case <-timer.C:
+				logger.Infof("wait 5s after r.runCore, try to run core again")
+				return false
+			}
+		}
+
+		if waitCloseFunc() {
 			return
-		case <-time.After(time.Second * 5):
-			logger.Infof("wait 5s after r.runCore, try to run core again")
 		}
 	}
 }

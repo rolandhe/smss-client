@@ -254,11 +254,20 @@ func monitor[T any](p *pool[T]) {
 		} else {
 			checkInterval = checkIntervalConf
 		}
-		select {
-		case <-p.shutdownCtrl.shutdownChan:
-			close(p.shutdownCtrl.waitChan)
+		waitShutFunc := func() bool {
+			timer := time.NewTimer(checkInterval)
+			defer timer.Stop()
+			select {
+			case <-p.shutdownCtrl.shutdownChan:
+				close(p.shutdownCtrl.waitChan)
+				return true
+			case <-timer.C:
+				return false
+			}
+		}
+
+		if waitShutFunc() {
 			return
-		case <-time.After(checkInterval):
 		}
 
 		p.checkInvalidObjs()
@@ -436,11 +445,13 @@ func (sc *semaWithCounter) acquire(d time.Duration) (bool, int64) {
 		c := sc.counter.Add(1)
 		return true, c
 	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
 	case sc.ch <- struct{}{}:
 		c := sc.counter.Add(1)
 		return true, c
-	case <-time.After(d):
+	case <-timer.C:
 		return false, 0
 	}
 }

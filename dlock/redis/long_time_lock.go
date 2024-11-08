@@ -193,9 +193,11 @@ func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState)) {
 }
 
 func sleep(d time.Duration, shutdownChan chan struct{}) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
 	case <-shutdownChan:
-	case <-time.After(d):
+	case <-timer.C:
 	}
 }
 
